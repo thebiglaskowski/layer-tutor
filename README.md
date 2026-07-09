@@ -24,3 +24,13 @@ python3 -m http.server 8000
 cd typing-tutor
 node --test tests/*.test.js     # Node 18+
 ```
+
+### Deploy (Cloudflare Pages)
+
+Live at https://layer-tutor.pages.dev — installable as a PWA (Add to Home
+Screen on Android; plug the keyboard into the phone via USB-OTG).
+
+```sh
+cd typing-tutor
+npx wrangler pages deploy . --project-name layer-tutor --branch main
+```
