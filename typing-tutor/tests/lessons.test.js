@@ -56,3 +56,26 @@ test('buildRound with rand=()=>0 is deterministic (pool order)', () => {
   const stage = STAGES[0];
   assert.deepEqual(buildRound(stage, () => 0), buildRound(stage, () => 0));
 });
+
+test('buildRound refills the pool when roundSize exceeds pool length', () => {
+  const stage = { id: 'tiny', name: 'Tiny', layerHint: 'x', roundSize: 7, pool: ['a', 'b', 'c'] };
+  const round = buildRound(stage, () => 0);
+  assert.equal(round.length, 7);
+  for (const item of round) assert.ok(stage.pool.includes(item));
+});
+
+test('layer usage per stage matches the curriculum rules', () => {
+  const expected = {
+    'home-row': [0], 'top-row': [0], 'bottom-row': [0], 'all-letters': [0],
+    numbers: [1], navigation: [1],
+    'shifted-symbols': [0, 2], punctuation: [0, 2],
+    mixed: [0, 1, 2],
+  };
+  for (const stage of STAGES) {
+    const layers = new Set();
+    for (const item of stage.pool) {
+      for (const ch of item) layers.add(charToKey(ch).layer);
+    }
+    assert.deepEqual([...layers].sort(), expected[stage.id], `stage ${stage.id}`);
+  }
+});
