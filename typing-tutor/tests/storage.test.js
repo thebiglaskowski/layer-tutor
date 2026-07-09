@@ -67,3 +67,11 @@ test('progress persists across createStorage instances sharing a backing', () =>
   assert.equal(data.stages.s1.bestWpm, 33);
   assert.equal(data.stages.s2.unlocked, true);
 });
+
+test('reset wipes progress back to defaults', () => {
+  const store = createStorage(IDS, fakeBacking());
+  store.saveResult('s1', 40, 95);
+  const data = store.reset();
+  assert.deepEqual(data.stages.s1, { unlocked: true, bestWpm: 0, bestAccuracy: 0, timesPlayed: 0 });
+  assert.equal(data.stages.s2.unlocked, false);
+});

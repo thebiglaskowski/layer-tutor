@@ -63,6 +63,17 @@ h1 {
 .stage-hint { color: var(--text-dim); font-size: 0.85rem; }
 .stage-stats { font-family: var(--mono); color: var(--text-dim); font-size: 0.85rem; }
 
+#btn-reset {
+  margin-top: 1.6rem;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+#btn-reset.armed {
+  border-color: var(--error);
+  color: var(--error);
+  box-shadow: 0 0 16px rgba(248, 113, 113, 0.15);
+}
+
 /* ---------- game ---------- */
 #game-header { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 2.5rem; }
 #game-stage-name { flex: 1; font-size: 1.1rem; font-weight: 600; }

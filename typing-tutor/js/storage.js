@@ -48,5 +48,10 @@ export function createStorage(stageIds, backing = globalThis.localStorage) {
     return { data, unlockedNext };
   }
 
-  return { load, saveResult };
+  function reset() {
+    backing.setItem(STORE_KEY, JSON.stringify({ stages: {} }));
+    return load();
+  }
+
+  return { load, saveResult, reset };
 }

@@ -85,6 +85,29 @@ document.addEventListener('keydown', (e) => {
   refresh();
 });
 
+// Reset is two-click: first click arms it for 3 seconds, second click wipes.
+const resetBtn = document.getElementById('btn-reset');
+let resetArmed = null;
+
+function disarmReset() {
+  clearTimeout(resetArmed);
+  resetArmed = null;
+  resetBtn.textContent = 'Reset progress';
+  resetBtn.classList.remove('armed');
+}
+
+resetBtn.addEventListener('click', () => {
+  if (resetArmed) {
+    disarmReset();
+    progress = storage.reset();
+    ui.renderMenu(progress, startStage);
+  } else {
+    resetBtn.textContent = 'Click again to wipe all progress';
+    resetBtn.classList.add('armed');
+    resetArmed = setTimeout(disarmReset, 3000);
+  }
+});
+
 document.getElementById('btn-quit').addEventListener('click', goMenu);
 document.getElementById('btn-menu').addEventListener('click', goMenu);
 document.getElementById('btn-retry').addEventListener('click', () => startStage(stage));
