@@ -28,7 +28,7 @@ not typing content.
 Top:    Esc Q W E R T [Alt] | [Ctrl] Y U I O P Bspace
 Home:   Caps A S D F G [Tab] | [Shift] H J K L ; '
 Bottom: Shift Z X C V B     | N M , . / Delete
-Thumb:  Ctrl [FN_MO13] Space | GUI [FN_MO23] Enter
+Thumb:  Ctrl [FN_MO13] Space | Enter [FN_MO23] GUI
 ```
 
 **Layer 1 — Numbers/Nav** (held via left thumb key `FN_MO13`):
@@ -133,8 +133,7 @@ cleared at ≥90% accuracy.
 ## Architecture — vanilla JS, no build step
 
 New `typing-tutor/` folder at repo root, alongside `qmk-layout.vil`.
-Native ES modules, opened directly as `index.html` in Chrome — no npm
-install, no bundler, nothing to break later.
+Native ES modules served with a trivial static server (`python3 -m http.server`) — native ES modules don't load over file://, but no npm install and no bundler needed.
 
 ```
 typing-tutor/

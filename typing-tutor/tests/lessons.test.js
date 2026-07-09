@@ -79,3 +79,12 @@ test('layer usage per stage matches the curriculum rules', () => {
     assert.deepEqual([...layers].sort(), expected[stage.id], `stage ${stage.id}`);
   }
 });
+
+test('every pool item is a non-empty string', () => {
+  for (const stage of STAGES) {
+    for (const item of stage.pool) {
+      assert.equal(typeof item, 'string', stage.id);
+      assert.ok(item.length > 0, `stage ${stage.id} has an empty item`);
+    }
+  }
+});

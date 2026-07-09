@@ -66,6 +66,7 @@ function finishStage() {
 }
 
 document.addEventListener('keydown', (e) => {
+  if (e.repeat) return;
   if (!game || game.done) return;
   if (document.getElementById('screen-game').classList.contains('hidden')) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
