@@ -162,6 +162,16 @@ Each module has one job and a narrow interface:
   DOM.
 - `storage.js` is the only module that touches `localStorage`.
 
+## Visual direction
+
+Dark, modern, polished. Dark background (near-black, not pure #000),
+high-contrast neon-ish accent palette for feedback states (green =
+correct/target key, amber = hold-this thumb key, red = error flash),
+generous spacing, a monospace or geometric sans for the prompt text,
+subtle glow/transition effects on key highlights and stage completion.
+Should feel like a sleek game, not a form. No CSS framework — hand-rolled
+CSS custom properties for the palette.
+
 ## Out of scope
 
 - Layer 3 (RGB/Adjust) drills — not typing content.
