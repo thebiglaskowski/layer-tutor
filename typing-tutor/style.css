@@ -1,0 +1,146 @@
+:root {
+  --bg: #0a0d14;
+  --panel: #131a2a;
+  --panel-edge: #1e2940;
+  --key: #1a2338;
+  --key-edge: #2a3856;
+  --text: #e8ecf4;
+  --text-dim: #8a94ab;
+  --accent: #22d3ee;
+  --correct: #34d399;
+  --hold: #fbbf24;
+  --error: #f87171;
+  --radius: 10px;
+  --mono: 'JetBrains Mono', 'Cascadia Code', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(1200px 600px at 70% -10%, rgba(34, 211, 238, 0.08), transparent 60%),
+    radial-gradient(900px 500px at 10% 110%, rgba(251, 191, 36, 0.05), transparent 60%),
+    var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+}
+
+#app { width: min(1100px, 94vw); padding: 3rem 0 4rem; }
+.hidden { display: none !important; }
+.screen { animation: fadeIn 0.25s ease; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---------- menu ---------- */
+h1 {
+  font-size: 2.6rem; font-weight: 800; letter-spacing: -0.02em;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.subtitle { color: var(--text-dim); margin: 0.4rem 0 2.2rem; }
+
+#stage-list { list-style: none; display: grid; gap: 0.7rem; }
+.stage-card {
+  display: flex; align-items: center; gap: 1.1rem;
+  background: linear-gradient(180deg, var(--panel), rgba(19, 26, 42, 0.6));
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  padding: 1rem 1.3rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.stage-card:hover:not(.locked) {
+  transform: translateY(-2px);
+  border-color: var(--accent);
+  box-shadow: 0 8px 30px rgba(34, 211, 238, 0.12);
+}
+.stage-card.locked { opacity: 0.45; cursor: default; }
+.stage-num { font-family: var(--mono); color: var(--accent); font-size: 0.9rem; }
+.stage-info { display: flex; flex-direction: column; gap: 0.15rem; flex: 1; }
+.stage-name { font-weight: 600; }
+.stage-hint { color: var(--text-dim); font-size: 0.85rem; }
+.stage-stats { font-family: var(--mono); color: var(--text-dim); font-size: 0.85rem; }
+
+/* ---------- game ---------- */
+#game-header { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 2.5rem; }
+#game-stage-name { flex: 1; font-size: 1.1rem; font-weight: 600; }
+#live-stats { display: flex; gap: 1.2rem; font-family: var(--mono); color: var(--text-dim); font-size: 0.9rem; }
+#live-stats #live-wpm { color: var(--accent); }
+
+button {
+  font: inherit; color: var(--text);
+  background: var(--key); border: 1px solid var(--key-edge);
+  border-radius: 8px; padding: 0.5rem 1rem; cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 238, 0.15); }
+
+#prompt {
+  font-family: var(--mono); font-size: 2.2rem; letter-spacing: 0.06em;
+  text-align: center; min-height: 3.2rem; margin-bottom: 2.5rem;
+}
+.ch { display: inline-block; min-width: 0.6ch; transition: color 0.1s ease; }
+.ch.typed { color: var(--correct); }
+.ch.current {
+  color: var(--text);
+  border-bottom: 3px solid var(--accent);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.ch.pending { color: var(--text-dim); opacity: 0.5; }
+.ch.space { opacity: 0.35; }
+@keyframes pulse { 50% { border-color: transparent; } }
+.ch.error-flash { animation: shake 0.25s ease; color: var(--error); }
+@keyframes shake {
+  25% { transform: translateX(-3px); }
+  75% { transform: translateX(3px); }
+}
+
+/* ---------- keyboard diagram ---------- */
+#keyboard { display: flex; justify-content: center; gap: 3.5rem; user-select: none; }
+.kb-half { display: flex; flex-direction: column; gap: 0.4rem; }
+.kb-row { display: flex; gap: 0.4rem; }
+.kb-thumb-L { justify-content: flex-end; margin-top: 0.3rem; }
+.kb-thumb-R { justify-content: flex-start; margin-top: 0.3rem; }
+.kb-key {
+  width: 3.2rem; height: 3.2rem;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 0.95rem;
+  background: linear-gradient(180deg, var(--key), #151d30);
+  border: 1px solid var(--key-edge);
+  border-radius: 8px;
+  transition: background 0.1s ease, box-shadow 0.15s ease, border-color 0.1s ease, transform 0.1s ease;
+}
+.kb-key-wide-legend { font-size: 0.62rem; color: var(--text-dim); }
+.kb-key-blank { opacity: 0.3; }
+.kb-key.kb-target {
+  background: var(--correct); color: #06281c; border-color: var(--correct);
+  box-shadow: 0 0 22px rgba(52, 211, 153, 0.55);
+  transform: translateY(-2px);
+  font-weight: 700;
+}
+.kb-key.kb-hold {
+  background: var(--hold); color: #2d2005; border-color: var(--hold);
+  box-shadow: 0 0 22px rgba(251, 191, 36, 0.5);
+  font-weight: 700;
+}
+#layer-hint { text-align: center; color: var(--text-dim); margin-top: 1.6rem; font-size: 0.9rem; }
+
+/* ---------- results ---------- */
+#screen-results { text-align: center; padding-top: 4rem; }
+#results-title { font-size: 2rem; margin-bottom: 2rem; }
+#results-stats { display: flex; justify-content: center; gap: 3rem; margin-bottom: 2.5rem; }
+.stat { display: flex; flex-direction: column; }
+.stat-value { font-family: var(--mono); font-size: 3rem; font-weight: 700; color: var(--accent); }
+.stat-label { color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.75rem; }
+#results-mistakes { margin-bottom: 2.5rem; color: var(--text-dim); }
+#results-mistakes h3 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.8rem; }
+.miss { display: inline-block; margin: 0.2rem 0.4rem; font-family: var(--mono); }
+.miss kbd {
+  background: var(--key); border: 1px solid var(--error); border-radius: 6px;
+  padding: 0.15rem 0.5rem; color: var(--error);
+}
+.flawless { color: var(--correct); }
+#results-actions { display: flex; justify-content: center; gap: 1rem; }
+#btn-next { border-color: var(--accent); color: var(--accent); }

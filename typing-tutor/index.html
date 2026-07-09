@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Layer Tutor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main id="app">
+    <section id="screen-menu" class="screen">
+      <h1>Layer Tutor</h1>
+      <p class="subtitle">Learn your split keyboard, layer by layer</p>
+      <ol id="stage-list"></ol>
+    </section>
+
+    <section id="screen-game" class="screen hidden">
+      <header id="game-header">
+        <button id="btn-quit">&larr; Menu</button>
+        <h2 id="game-stage-name"></h2>
+        <div id="live-stats">
+          <span id="live-wpm">0 wpm</span>
+          <span id="live-acc">100%</span>
+          <span id="live-progress"></span>
+        </div>
+      </header>
+      <div id="prompt"></div>
+      <div id="keyboard"></div>
+      <p id="layer-hint"></p>
+    </section>
+
+    <section id="screen-results" class="screen hidden">
+      <h2 id="results-title"></h2>
+      <div id="results-stats"></div>
+      <div id="results-mistakes"></div>
+      <div id="results-actions">
+        <button id="btn-retry">Retry</button>
+        <button id="btn-next" class="hidden">Next stage &rarr;</button>
+        <button id="btn-menu">Menu</button>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
