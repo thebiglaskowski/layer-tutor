@@ -119,18 +119,19 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 2
 }
 
 .kb-row { display: flex; gap: 0.5rem; }
-.kb-thumb-L, .kb-thumb-R { align-items: flex-end; margin-top: 0.6rem; }
+.kb-thumb-L, .kb-thumb-R { width: 100%; align-items: flex-end; margin-top: 0.6rem; }
 .kb-thumb-L { justify-content: flex-end; }
 .kb-thumb-R { justify-content: flex-start; }
 
 /* Thumb cluster, per the physical board: the two 1u keys sit upright and
-   level, dropped below the bottom row; only the wide innermost key
-   (Space / Enter) rotates inward and hangs lowest. */
+   level, dropped below the bottom row; the innermost key (Space / Enter)
+   is a tall vertical key at the inner edge, rising into the empty cell
+   above it and hanging slightly lower than its neighbors. */
 .kb-thumb-L .kb-key:nth-child(1) { --dy: 8px; }
 .kb-thumb-L .kb-key:nth-child(2) { --dy: 8px; }
-.kb-thumb-L .kb-key:nth-child(3) { --rot: -26deg; --dy: 24px; width: 5rem; margin-left: 0.3rem; }
+.kb-thumb-L .kb-key:nth-child(3) { --dy: 14px; height: 5.4rem; margin-left: 0.3rem; }
 
-.kb-thumb-R .kb-key:nth-child(1) { --rot: 26deg; --dy: 24px; width: 5rem; margin-right: 0.3rem; }
+.kb-thumb-R .kb-key:nth-child(1) { --dy: 14px; height: 5.4rem; margin-right: 0.3rem; }
 .kb-thumb-R .kb-key:nth-child(2) { --dy: 8px; }
 .kb-thumb-R .kb-key:nth-child(3) { --dy: 8px; }
 
