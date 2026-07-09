@@ -10,14 +10,14 @@ const LEFT = [
   [['L00', 'Esc', 'Tab', 'Tab'], ['L01', 'Q', '1', '!'], ['L02', 'W', '2', '@'], ['L03', 'E', '3', '#'], ['L04', 'R', '4', '$'], ['L05', 'T', '5', '%'], ['L06', 'Alt', 'Ctrl', 'Ctrl']],
   [['L10', 'Caps', 'Ctrl', 'Ctrl'], ['L11', 'A', XX, XX], ['L12', 'S', XX, XX], ['L13', 'D', XX, XX], ['L14', 'F', XX, XX], ['L15', 'G', XX, XX], ['L16', 'Tab', 'Alt', 'Alt']],
   [['L20', 'Shift', 'Shift', 'Shift'], ['L21', 'Z', XX, XX], ['L22', 'X', XX, XX], ['L23', 'C', XX, XX], ['L24', 'V', XX, XX], ['L25', 'B', XX, XX]],
-  [['L33', 'Ctrl', 'GUI', 'GUI'], ['L34', 'NUM', 'NUM', 'NUM'], ['L35', 'Space', 'Space', 'Space']],
+  [['L33', 'Ctrl', 'Win', 'Win'], ['L34', 'Fn', 'Fn', 'Fn'], ['L35', 'Space', 'Space', 'Space']],
 ];
 
 const RIGHT = [
   [['R00', 'Ctrl', 'Ctrl', 'Ctrl'], ['R01', 'Y', '6', '^'], ['R02', 'U', '7', '&'], ['R03', 'I', '8', '*'], ['R04', 'O', '9', '('], ['R05', 'P', '0', ')'], ['R06', 'Bksp', 'Bksp', 'Bksp']],
   [['R10', 'Shift', 'Alt', 'Alt'], ['R11', 'H', '←', '-'], ['R12', 'J', '↓', '='], ['R13', 'K', '↑', '['], ['R14', 'L', '→', ']'], ['R15', ';', XX, '\\'], ['R16', "'", XX, '`']],
   [['R20', 'N', XX, '_'], ['R21', 'M', XX, '+'], ['R22', ',', XX, '{'], ['R23', '.', XX, '}'], ['R24', '/', XX, '|'], ['R25', 'Del', XX, '~']],
-  [['R33', 'Enter', 'Enter', 'Enter'], ['R34', 'SYM', 'SYM', 'SYM'], ['R35', 'GUI', 'GUI', 'GUI']],
+  [['R33', 'Enter', 'Enter', 'Enter'], ['R34', 'Fn', 'Fn', 'Fn'], ['R35', 'Win', 'Win', 'Win']],
 ];
 
 function buildKeys(rows, half) {

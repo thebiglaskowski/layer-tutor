@@ -123,15 +123,16 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 2
 .kb-thumb-L { justify-content: flex-end; }
 .kb-thumb-R { justify-content: flex-start; }
 
-/* Thumb arc: outer key barely rotated, middle key rotated + dropped a bit,
-   innermost key (Space / Enter) wide, steeply rotated, dropped the most. */
-.kb-thumb-L .kb-key:nth-child(1) { --rot: -4deg; }
-.kb-thumb-L .kb-key:nth-child(2) { --rot: -8deg; --dy: 7px; }
-.kb-thumb-L .kb-key:nth-child(3) { --rot: -20deg; --dy: 15px; width: 4.8rem; }
+/* Thumb cluster, per the physical board: the two 1u keys sit upright and
+   level, dropped below the bottom row; only the wide innermost key
+   (Space / Enter) rotates inward and hangs lowest. */
+.kb-thumb-L .kb-key:nth-child(1) { --dy: 8px; }
+.kb-thumb-L .kb-key:nth-child(2) { --dy: 8px; }
+.kb-thumb-L .kb-key:nth-child(3) { --rot: -26deg; --dy: 24px; width: 5rem; margin-left: 0.3rem; }
 
-.kb-thumb-R .kb-key:nth-child(1) { --rot: 20deg; --dy: 15px; width: 4.8rem; }
-.kb-thumb-R .kb-key:nth-child(2) { --rot: 8deg; --dy: 7px; }
-.kb-thumb-R .kb-key:nth-child(3) { --rot: 4deg; }
+.kb-thumb-R .kb-key:nth-child(1) { --rot: 26deg; --dy: 24px; width: 5rem; margin-right: 0.3rem; }
+.kb-thumb-R .kb-key:nth-child(2) { --dy: 8px; }
+.kb-thumb-R .kb-key:nth-child(3) { --dy: 8px; }
 
 .kb-key {
   position: relative;

@@ -1,7 +1,7 @@
 // The 9-stage curriculum. Content rules:
 // - Stages 1-4 use only base-layer (layer 0) characters.
-// - Stage 5-6 exercise layer 1 (hold LEFT thumb / NUM).
-// - Stage 7-8 exercise layer 2 (hold RIGHT thumb / SYM) mixed with letters.
+// - Stage 5-6 exercise layer 1 (hold LEFT thumb / Fn).
+// - Stage 7-8 exercise layer 2 (hold RIGHT thumb / Fn) mixed with letters.
 // - Stage 9 mixes all three layers in realistic strings.
 // Every character in every pool item must resolve via charToKey() — enforced
 // by tests/lessons.test.js.
@@ -52,7 +52,7 @@ export const STAGES = [
   {
     id: 'numbers',
     name: 'Numbers',
-    layerHint: 'Hold LEFT thumb (NUM) for digits',
+    layerHint: 'Hold LEFT thumb (Fn) for digits',
     roundSize: 12,
     pool: ['42', '2024', '90210', '8675309', '1234', '0987', '31415', '2718',
       '1024', '4096', '365', '555', '789', '8080', '443', '1999', '2001',
@@ -61,7 +61,7 @@ export const STAGES = [
   {
     id: 'navigation',
     name: 'Navigation',
-    layerHint: 'Hold LEFT thumb (NUM) · arrows on HJKL',
+    layerHint: 'Hold LEFT thumb (Fn) · arrows on HJKL',
     roundSize: 10,
     pool: ['←←→→', '↑↑↓↓', '←↓↑→', '→→↑', '↓↓←', '↑→↓←', '←←←', '→↑→↓',
       '↓←↑→', '↑↓↑↓', '→↓↓→', '←↑←↑'],
@@ -69,7 +69,7 @@ export const STAGES = [
   {
     id: 'shifted-symbols',
     name: 'Shifted Symbols',
-    layerHint: 'Hold RIGHT thumb (SYM) for !@#$%…',
+    layerHint: 'Hold RIGHT thumb (Fn) for !@#$%…',
     roundSize: 12,
     pool: ['wow!', '(ok)', 'a&b', '@home', '#tag', 'yes!', 'stop!', '$cash',
       'hash#', '(wow)', 'a*b', 'x^y', '%rate', 'one&two', 'go!', 'this&that',
@@ -78,7 +78,7 @@ export const STAGES = [
   {
     id: 'punctuation',
     name: 'Brackets & Punctuation',
-    layerHint: 'Hold RIGHT thumb (SYM) · right hand',
+    layerHint: 'Hold RIGHT thumb (Fn) · right hand',
     roundSize: 12,
     pool: ['x=y', 'a-b', '[list]', '{key}', '`code`', 'a_b', 'c|d', '~home',
       'one+two', 're-do', 'snake_case', 'kebab-case', 'a=b', '[a]', '{x}',
