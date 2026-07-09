@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Layer Tutor</title>
+  <meta name="theme-color" content="#0a0d14">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -42,5 +46,8 @@
     </section>
   </main>
   <script type="module" src="js/main.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js');
+  </script>
 </body>
 </html>
