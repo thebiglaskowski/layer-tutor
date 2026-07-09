@@ -21,9 +21,9 @@ const PAD = 0.30;      // case padding around keys (u)
 // Left-half thumb cluster: fans clockwise toward the inner edge; the
 // innermost key (Space) is a tall portrait key tucked under the inner column.
 const THUMB_GEOM_L = {
-  L33: { x: 3.30, y: 3.30, w: 1, h: 1, r: 6 },
-  L34: { x: 4.40, y: 3.46, w: 1, h: 1, r: 14 },
-  L35: { x: 5.55, y: 2.85, w: 1, h: 1.85, r: 22 },
+  L33: { x: 3.45, y: 3.30, w: 1, h: 1, r: 6 },
+  L34: { x: 4.58, y: 3.46, w: 1, h: 1, r: 14 },
+  L35: { x: 5.75, y: 2.85, w: 1, h: 1.85, r: 22 },
 };
 // Right thumbs mirror left ones (Enter <-> Space, Fn <-> Fn, Win <-> Ctrl).
 const THUMB_MIRROR = { R33: 'L35', R34: 'L34', R35: 'L33' };
@@ -58,10 +58,10 @@ const CASE_L = [
   [6, CO[5] - PAD], [6, CO[6] - PAD],
   [7 + PAD, CO[6] - PAD],
   [7 + PAD, 3.85],
-  [6.10, 5.30],
-  [3.30, 4.88],
-  [3.02, 4.58],
-  [3.02, CO[2] + 3 + PAD],
+  [6.25, 5.30],
+  [3.45, 4.88],
+  [3.15, 4.58],
+  [3.15, CO[2] + 3 + PAD],
   [2, CO[2] + 3 + PAD], [2, CO[1] + 3 + PAD],
   [1, CO[1] + 3 + PAD], [1, CO[0] + 3 + PAD],
   [-PAD, CO[0] + 3 + PAD],
