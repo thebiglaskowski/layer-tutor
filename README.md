@@ -22,5 +22,5 @@ python3 -m http.server 8000
 
 ```sh
 cd typing-tutor
-node --test tests/     # Node 18+
+node --test tests/*.test.js     # Node 18+
 ```
