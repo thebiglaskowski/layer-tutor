@@ -21,7 +21,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
       - name: Unit tests
         working-directory: typing-tutor
         run: node --test tests/*.test.js
@@ -46,7 +46,7 @@ jobs:
         run: |
           missing=0
           if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN is not set. Create a token (Account → Cloudflare Pages → Edit) and run: gh secret set CLOUDFLARE_API_TOKEN"
+            echo "::error::CLOUDFLARE_API_TOKEN is not set. Create a token (Account → Cloudflare Pages → Edit) and run: bash scripts/setup-github-deploy.sh"
             missing=1
           fi
           if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
@@ -57,7 +57,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       - name: Stage runtime assets
         run: bash scripts/stage-pages.sh
