@@ -30,6 +30,7 @@ Desktop.ini
 /tmp-deploy/
 .deploy-staging/
 .tmp/
+.pages-out/
 
 # Env / secrets / credentials
 .env
@@ -40,12 +41,15 @@ Desktop.ini
 .credentials/
 secrets/
 
-# Claude / agent local overrides (keep project CLAUDE.md if you add one)
+# Claude / agent local files (project guide is force-added when intentional)
 .claude/settings.local.json
 .claude/*.local.*
+CLAUDE.md
+AGENTS.md
 
-# Superpowers / agent session scratch (not source of truth)
-.superpowers/sdd/
+# Superpowers / planning scratch (not product source)
+.superpowers/
+docs/superpowers/
 
 # Logs & coverage
 logs/
@@ -64,6 +68,3 @@ __pycache__/
 *.tmp
 *.orig
 .cache/
-
-# Cloudflare Pages staging output
-.pages-out/
