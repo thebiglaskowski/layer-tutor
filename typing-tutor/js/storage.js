@@ -12,7 +12,7 @@
 //       heatmap: { ch: n },
 //       streak: { lastDate: 'YYYY-MM-DD', count: 0 },
 //       customLists: [{ id, name, items: string[] }],
-//       settings: { focusMode, showHomeGhost, boardCollapsed, reducedBoardAuto }
+//       settings: { focusMode, showHomeGhost, boardCollapsed, reducedBoardAuto, fullLayerMap }
 //     }
 //   }
 // }
@@ -48,6 +48,8 @@ function defaultSettings() {
     showHomeGhost: true,
     boardCollapsed: false,
     reducedBoardAuto: true,
+    // When the next char needs a layer, show that layer on every keycap.
+    fullLayerMap: true,
   };
 }
 

@@ -47,7 +47,11 @@ function now() {
 
 function settings() {
   return progress.settings || {
-    focusMode: true, showHomeGhost: true, boardCollapsed: false, reducedBoardAuto: true,
+    focusMode: true,
+    showHomeGhost: true,
+    boardCollapsed: false,
+    reducedBoardAuto: true,
+    fullLayerMap: true,
   };
 }
 
@@ -102,6 +106,7 @@ function wireSettings() {
     ['set-home-ghost', 'showHomeGhost'],
     ['set-board-collapsed', 'boardCollapsed'],
     ['set-reduced-auto', 'reducedBoardAuto'],
+    ['set-full-layer-map', 'fullLayerMap'],
   ];
   for (const [id, key] of map) {
     const el = document.getElementById(id);
@@ -215,7 +220,7 @@ function refresh() {
   ui.renderPrompt(item, game.cursor);
   const ch = currentChar(game);
   const target = activeBoard.charToKey(ch);
-  kb?.highlightTarget(target);
+  kb?.highlightTarget(target, { fullLayerMap: settings().fullLayerMap !== false });
   applyBoardChrome(target);
   ui.setContextTip(contextualTip(ch, (c) => activeBoard.charToKey(c), stage?.coachTip));
   const { frac } = progressCounts(game);
@@ -347,18 +352,13 @@ function sandboxType(ch) {
       sound.playError();
       sandboxKb?.flashWrong(ch, (c) => activeBoard.charToKey(c));
     }
-    const t = activeBoard.charToKey(sandboxLoad ? sandboxLoad[sandboxCursor] : ch);
-    sandboxKb?.highlightTarget(t);
-    ui.setContextTip(contextualTip(
-      sandboxLoad ? sandboxLoad[sandboxCursor] : ch,
-      (c) => activeBoard.charToKey(c),
-      '',
-    ));
-    // tip uses sandbox-tip id
+    const nextCh = sandboxLoad ? sandboxLoad[sandboxCursor] : ch;
+    const t = activeBoard.charToKey(nextCh);
+    sandboxKb?.highlightTarget(t, { fullLayerMap: settings().fullLayerMap !== false });
     const tip = document.getElementById('sandbox-tip');
     if (tip) {
       tip.textContent = contextualTip(
-        sandboxLoad ? sandboxLoad[sandboxCursor] : ch,
+        nextCh,
         (c) => activeBoard.charToKey(c),
         'Type freely — green key follows.',
       );
@@ -368,7 +368,7 @@ function sandboxType(ch) {
   prompt.textContent += ch === ' ' ? '·' : ch;
   if (prompt.textContent.length > 80) prompt.textContent = prompt.textContent.slice(-60);
   const t = activeBoard.charToKey(ch);
-  sandboxKb?.highlightTarget(t);
+  sandboxKb?.highlightTarget(t, { fullLayerMap: settings().fullLayerMap !== false });
   const tip = document.getElementById('sandbox-tip');
   if (tip) tip.textContent = contextualTip(ch, (c) => activeBoard.charToKey(c), '');
   sound.playCorrect();
@@ -544,7 +544,7 @@ document.getElementById('btn-sandbox-load')?.addEventListener('click', () => {
   sandboxCursor = 0;
   renderSandboxPrompt();
   const t = activeBoard.charToKey(sandboxLoad[0]);
-  sandboxKb?.highlightTarget(t);
+  sandboxKb?.highlightTarget(t, { fullLayerMap: settings().fullLayerMap !== false });
   document.getElementById('sandbox-prompt')?.focus();
 });
 

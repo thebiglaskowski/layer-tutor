@@ -61,6 +61,9 @@ test('fluent badge, notes, goals, settings', () => {
   assert.equal(data.stages.s1.wpmGoal, 45);
   data = s.updateSettings({ focusMode: false });
   assert.equal(data.settings.focusMode, false);
+  assert.equal(data.settings.fullLayerMap, true); // default preserved
+  data = s.updateSettings({ fullLayerMap: false });
+  assert.equal(data.settings.fullLayerMap, false);
   data = s.setOnboardingDone(true);
   assert.equal(data.onboardingDone, true);
 });

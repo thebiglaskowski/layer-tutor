@@ -274,8 +274,15 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 2
 }
 .kb-key-wide-legend .kb-legend { font-size: 0.62rem; }
 .kb-key-blank { opacity: 0.3; }
-/* Layer output on the target key only — base caps stay on every other key. */
+/* Target-only overlay when full-layer-map is off. */
 .kb-key.kb-layer-output .kb-legend { font-size: 1.05em; font-weight: 800; }
+/* Full plane mode: subtle ring so “you are on layer N” is obvious. */
+#keyboard.kb-showing-layer {
+  filter: drop-shadow(0 0 18px rgba(251, 191, 36, 0.12));
+}
+#keyboard.kb-showing-layer .kb-key.kb-layer-plane {
+  border-color: rgba(251, 191, 36, 0.35);
+}
 
 .kb-key.kb-target {
   --lift: -2px;

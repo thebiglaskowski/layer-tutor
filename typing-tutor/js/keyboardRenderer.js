@@ -178,19 +178,29 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
     container.appendChild(halfEl);
   }
 
-  // Always paint *base* keycap legends so the diagram matches the physical
-  // board. Swapping the whole board to layer-1/2 labels made keys feel
-  // "remapped" the moment numbers/symbols showed up in the curriculum.
-  function paintBaseLegends() {
+  /**
+   * Paint legends for a display layer (0 = base keycaps).
+   * Layer 1/2 = full momentary map while the prompt needs that plane.
+   */
+  function paintLegends(layer = 0) {
+    container.classList.toggle('kb-showing-layer', layer > 0);
+    container.dataset.displayLayer = String(layer);
     for (const key of KEYS) {
       const el = keyEls.get(key.id);
-      const text = key.legends[0];
+      // Prefer layer legend; fall back to base so mods still read.
+      let text = key.legends[layer];
+      if (text == null && layer > 0) text = key.legends[0];
       const legendEl = el.querySelector('.kb-legend');
       legendEl.textContent = text ?? '';
       el.classList.toggle('kb-key-blank', text == null);
       el.classList.toggle('kb-key-wide-legend', (text ?? '').length > 1);
+      el.classList.toggle('kb-layer-plane', layer > 0 && key.legends[layer] != null);
       el.classList.remove('kb-layer-output');
     }
+  }
+
+  function paintBaseLegends() {
+    paintLegends(0);
   }
 
   function clearHighlights() {
@@ -199,39 +209,41 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
       const badge = el.querySelector('.kb-badge');
       badge.hidden = true;
       badge.textContent = '';
-      // Restore base legend in case the target key was showing a layer glyph.
-      const key = KEYS.find((k) => k.id === el.dataset.keyId);
-      if (key) {
-        const legendEl = el.querySelector('.kb-legend');
-        const text = key.legends[0];
-        legendEl.textContent = text ?? '';
-        el.classList.toggle('kb-key-blank', text == null);
-        el.classList.toggle('kb-key-wide-legend', (text ?? '').length > 1);
-      }
     }
   }
 
-  function highlightTarget(target) {
+  /**
+   * @param {object|null} target  { keyId, layer, shift }
+   * @param {{ fullLayerMap?: boolean }} [opts]
+   *   fullLayerMap (default true): when target.layer > 0, show that layer on
+   *   every key so the whole plane is visible while "holding" for the prompt.
+   */
+  function highlightTarget(target, opts = {}) {
+    const fullLayerMap = opts.fullLayerMap !== false;
     clearHighlights();
-    if (!target) return;
+
+    if (!target) {
+      paintLegends(0);
+      return;
+    }
+
+    const showPlane = fullLayerMap && target.layer > 0;
+    paintLegends(showPlane ? target.layer : 0);
 
     const targetEl = keyEls.get(target.keyId);
     if (targetEl) {
       targetEl.classList.add('kb-target');
-      // If this character is produced on a held layer, show that glyph on the
-      // target key only (base caps stay everywhere else).
-      if (target.layer > 0) {
+      // Target-only overlay when full plane is off, or shift-upper on base.
+      if (!showPlane && target.layer > 0) {
         const key = KEYS.find((k) => k.id === target.keyId);
         const out = key?.legends[target.layer];
         if (out) {
-          const legendEl = targetEl.querySelector('.kb-legend');
-          legendEl.textContent = out;
+          targetEl.querySelector('.kb-legend').textContent = out;
           targetEl.classList.add('kb-layer-output');
           targetEl.classList.toggle('kb-key-wide-legend', out.length > 1);
           targetEl.classList.remove('kb-key-blank');
         }
-      } else if (target.shift) {
-        // Uppercase / shifted punctuation: show the produced form on target.
+      } else if (target.shift && target.layer === 0) {
         const key = KEYS.find((k) => k.id === target.keyId);
         const base = key?.legends[0];
         if (base && base.length === 1 && /[a-z]/i.test(base)) {
@@ -250,8 +262,6 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
       }
     }
     if (target.shift) {
-      // Light both shifts — either hand is valid, and matching only the letter
-      // hand looked like a wrong map when people always use left shift.
       for (const id of board.SHIFT_KEYS ?? shiftKeysFor(target)) {
         const shiftEl = keyEls.get(id);
         if (shiftEl) {

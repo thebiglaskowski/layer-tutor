@@ -111,6 +111,8 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
   if (setGhost) setGhost.checked = s.showHomeGhost !== false;
   if (setCollapsed) setCollapsed.checked = !!s.boardCollapsed;
   if (setReduced) setReduced.checked = s.reducedBoardAuto !== false;
+  const setFullMap = document.getElementById('set-full-layer-map');
+  if (setFullMap) setFullMap.checked = s.fullLayerMap !== false;
 
   // Grouped stage list
   const host = document.getElementById('stage-list');
