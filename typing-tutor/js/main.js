@@ -168,12 +168,17 @@ function isGameScreen() {
   return !document.getElementById('screen-game').classList.contains('hidden');
 }
 
-/** Normalize a keydown into a single typed character, or null if not typable. */
+/**
+ * Normalize a keydown into the character the OS/QMK actually produced.
+ * Prefer e.key (post-layout). Only special-case Space + arrows.
+ */
 function keyToChar(e) {
   if (ARROWS[e.key]) return ARROWS[e.key];
-  // Space: some hosts report key=" " , others only code="Space" / key="Spacebar".
-  // Also never treat Space as a button-activate when we're in a stage.
+  // Space must not activate focused buttons; accept several host representations.
   if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') return ' ';
+  // Printable character as produced by the keyboard firmware + OS.
+  // Do NOT map via e.code — that is physical QWERTY position and is wrong for
+  // custom layered boards if used as the typed character.
   if (e.key.length === 1) return e.key;
   return null;
 }

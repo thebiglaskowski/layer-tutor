@@ -261,17 +261,20 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 2
   transition: background 0.1s ease, box-shadow 0.15s ease, border-color 0.1s ease, transform 0.1s ease;
   overflow: hidden;
 }
-.kb-legend { line-height: 1; }
+.kb-legend { line-height: 1; color: inherit; }
 .kb-badge {
-  font-size: 0.45rem;
+  font-size: 0.42rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   line-height: 1;
-  margin-top: 0.15rem;
+  margin-top: 0.12rem;
   opacity: 0.95;
+  color: inherit;
 }
-.kb-key-wide-legend .kb-legend { font-size: 0.62rem; color: var(--text-dim); }
+.kb-key-wide-legend .kb-legend { font-size: 0.62rem; }
 .kb-key-blank { opacity: 0.3; }
+/* Layer output on the target key only — base caps stay on every other key. */
+.kb-key.kb-layer-output .kb-legend { font-size: 1.05em; font-weight: 800; }
 
 .kb-key.kb-target {
   --lift: -2px;
@@ -279,16 +282,22 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 2
   box-shadow: 0 0 22px rgba(52, 211, 153, 0.55);
   font-weight: 700;
 }
+.kb-key.kb-target .kb-legend,
+.kb-key.kb-target .kb-badge { color: #06281c; }
 .kb-key.kb-hold {
   background: var(--hold); color: #2d2005; border-color: var(--hold);
   box-shadow: 0 0 22px rgba(251, 191, 36, 0.5);
   font-weight: 700;
 }
+.kb-key.kb-hold .kb-legend,
+.kb-key.kb-hold .kb-badge { color: #2d2005; }
 .kb-key.kb-shift {
   background: var(--shift); color: #1e1035; border-color: var(--shift);
   box-shadow: 0 0 22px rgba(167, 139, 250, 0.5);
   font-weight: 700;
 }
+.kb-key.kb-shift .kb-legend,
+.kb-key.kb-shift .kb-badge { color: #1e1035; }
 
 #layer-hint { text-align: center; color: var(--text-dim); margin-top: 1.4rem; font-size: 0.9rem; }
 .coach-tip {
