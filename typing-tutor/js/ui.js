@@ -15,15 +15,26 @@ export function showScreen(id) {
     el.setAttribute('aria-hidden', on ? 'false' : 'true');
   }
   // Move focus to a sensible landmark on the new screen.
+  // During a run, focus the prompt (not Menu) so Space types a space instead of
+  // activating the focused button.
   requestAnimationFrame(() => {
     if (id === 'screen-menu') {
       document.querySelector('#stage-list .stage-card:not(.locked)')?.focus();
     } else if (id === 'screen-game') {
-      document.getElementById('btn-quit')?.focus();
+      document.getElementById('prompt')?.focus({ preventScroll: true });
     } else if (id === 'screen-results') {
       document.getElementById('btn-retry')?.focus();
     }
   });
+}
+
+/** Keep typing focus on the prompt while a stage is active. */
+export function focusTypingSurface() {
+  const prompt = document.getElementById('prompt');
+  if (!prompt) return;
+  if (document.activeElement !== prompt) {
+    prompt.focus({ preventScroll: true });
+  }
 }
 
 /**

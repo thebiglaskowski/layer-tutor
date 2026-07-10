@@ -210,6 +210,11 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 2
   font-family: var(--mono); font-size: 2.2rem; letter-spacing: 0.06em;
   text-align: center; min-height: 3.2rem; margin-bottom: 2rem;
   word-break: break-word;
+  outline: none;
+  border-radius: 8px;
+}
+#prompt:focus-visible {
+  box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.35);
 }
 .ch { display: inline-block; min-width: 0.6ch; transition: color 0.1s ease; }
 .ch.typed { color: var(--correct); }

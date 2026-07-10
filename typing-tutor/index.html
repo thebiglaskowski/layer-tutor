@@ -51,7 +51,8 @@
           <span id="live-progress"></span>
         </div>
       </header>
-      <div id="prompt" role="text"></div>
+      <!-- Focus lands here during a run so Space is typed, not used to activate Menu/buttons. -->
+      <div id="prompt" role="textbox" aria-readonly="true" tabindex="0"></div>
       <div id="keyboard"></div>
       <p id="layer-hint"></p>
       <p id="coach-tip" class="coach-tip"></p>

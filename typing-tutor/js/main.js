@@ -168,6 +168,22 @@ function isGameScreen() {
   return !document.getElementById('screen-game').classList.contains('hidden');
 }
 
+/** Normalize a keydown into a single typed character, or null if not typable. */
+function keyToChar(e) {
+  if (ARROWS[e.key]) return ARROWS[e.key];
+  // Space: some hosts report key=" " , others only code="Space" / key="Spacebar".
+  // Also never treat Space as a button-activate when we're in a stage.
+  if (e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar') return ' ';
+  if (e.key.length === 1) return e.key;
+  return null;
+}
+
+function isTypingCapture(e) {
+  if (!game || game.done || paused || !isGameScreen()) return false;
+  if (e.ctrlKey || e.metaKey || e.altKey) return false;
+  return keyToChar(e) !== null;
+}
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && isGameScreen() && game && !game.done) {
     e.preventDefault();
@@ -181,9 +197,13 @@ document.addEventListener('keydown', (e) => {
   if (!isGameScreen()) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
 
-  const ch = ARROWS[e.key] ?? (e.key.length === 1 ? e.key : null);
+  const ch = keyToChar(e);
   if (ch === null) return;
+
+  // Always claim the event so focused buttons (Menu) don't eat Space/Enter.
   e.preventDefault();
+  e.stopPropagation();
+  ui.focusTypingSurface();
 
   const result = handleKey(game, ch, now());
   if (result === 'error') {
@@ -200,6 +220,15 @@ document.addEventListener('keydown', (e) => {
   }
   sound.playCorrect();
   refresh();
+});
+
+// Space/Enter activate buttons on keyup in HTML — block that while typing.
+document.addEventListener('keyup', (e) => {
+  if (!isTypingCapture(e)) return;
+  if (e.code === 'Space' || e.key === ' ' || e.key === 'Enter' || e.code === 'Enter') {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 });
 
 window.addEventListener('blur', () => {
