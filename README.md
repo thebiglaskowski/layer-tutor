@@ -1,5 +1,7 @@
 # Layer Tutor
 
+![Layer Tutor](assets/layer-tutor.png)
+
 Browser typing trainer for **layered QMK/Vial split keyboards**.
 
 Primary board today:
@@ -113,17 +115,3 @@ Vanilla JS, zero npm dependencies, zero build step.
 | `storage.js` | Multi-board progress, fluent badges, heatmap |
 | `keyboardRenderer.js` | Geometry-driven split board |
 | `ui.js` / `main.js` / `sound.js` | Screens, board picker, input, beeps |
-
-## Repo naming
-
-This used to be a catch-all `QMK` dump. Better public names (pick one if you
-rename on GitHub):
-
-| Name | Why |
-|------|-----|
-| **`layer-tutor`** | Matches the product and Pages URL — best default |
-| **`split-layer-tutor`** | Emphasizes split + layers |
-| **`corne-layer-tutor`** | Honest about the first-class board; still multi-board capable |
-| **`qmk-layer-tutor`** | Searchable for QMK folks; a bit generic |
-
-Avoid bare `QMK` — people expect firmware, not a typing PWA.
