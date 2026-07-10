@@ -470,21 +470,36 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(34, 211, 2
   border-radius: var(--radius); padding: 1.5rem; width: min(28rem, 100%);
   max-height: 90vh; overflow: auto;
 }
-.modal-wide { width: min(52rem, 100%); }
+.modal-wide { width: min(64rem, 96vw); }
 .modal-actions { display: flex; gap: 0.5rem; margin: 0.5rem 0 1rem; }
 .list-saved { list-style: none; display: grid; gap: 0.5rem; }
 .list-saved li { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; padding: 0.5rem; background: var(--key); border-radius: 8px; }
 .list-btns { display: flex; gap: 0.35rem; }
 
-.cheat-layers { display: grid; gap: 1.2rem; margin: 1rem 0; }
-.cheat-layer h3 { font-size: 0.85rem; color: var(--accent); margin-bottom: 0.5rem; }
-.cheat-halves { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-.cheat-row { display: flex; gap: 0.2rem; margin-bottom: 0.2rem; flex-wrap: wrap; }
-.cheat-key {
-  font-family: var(--mono); font-size: 0.7rem; min-width: 1.6rem; text-align: center;
-  padding: 0.25rem 0.3rem; background: var(--key); border: 1px solid var(--key-edge); border-radius: 4px;
+.cheat-layers { display: grid; gap: 1.6rem; margin: 1.2rem 0; }
+.cheat-layer h3 {
+  font-size: 1.05rem; font-weight: 700; color: var(--accent);
+  margin-bottom: 0.7rem; letter-spacing: 0.02em;
 }
-.cheat-key.blank { opacity: 0.25; }
+.cheat-halves { display: grid; grid-template-columns: 1fr 1fr; gap: 1.4rem; }
+.cheat-row { display: flex; gap: 0.35rem; margin-bottom: 0.35rem; flex-wrap: wrap; }
+.cheat-key {
+  font-family: var(--mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  min-width: 2.4rem;
+  min-height: 2.4rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0.45rem 0.55rem;
+  background: var(--key);
+  border: 1px solid var(--key-edge);
+  border-radius: 8px;
+}
+.cheat-key.blank { opacity: 0.3; }
 
 .onboard-steps { list-style: none; display: grid; gap: 1.2rem; margin: 1.5rem 0; }
 .onboard-steps li { background: var(--panel); border: 1px solid var(--panel-edge); border-radius: var(--radius); padding: 1rem 1.2rem; }
