@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Layer Tutor</title>
+  <meta name="description" content="Layer Tutor — typing trainer for layered QMK split keyboards. Built for the CORNE V4 (40% 3×6 ortholinear); more boards welcome.">
+  <title>Layer Tutor · Corne V4</title>
   <meta name="theme-color" content="#0a0d14">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
@@ -11,37 +12,69 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="skip-link" href="#app">Skip to content</a>
+  <div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
   <main id="app">
-    <section id="screen-menu" class="screen">
+    <section id="screen-menu" class="screen" aria-label="Stage menu">
       <h1>Layer Tutor</h1>
       <p class="subtitle">Learn your split keyboard, layer by layer</p>
+
+      <div class="board-picker" role="group" aria-label="Keyboard model">
+        <label for="board-select" class="board-label">Keyboard</label>
+        <select id="board-select"></select>
+        <p id="board-product" class="board-product"></p>
+      </div>
+
+      <p class="menu-help">Arrow keys move between stages · Enter plays · Practice runs a longer free round without changing unlocks · Progress is saved per keyboard</p>
       <ol id="stage-list"></ol>
-      <button id="btn-reset">Reset progress</button>
+      <div id="heatmap" class="heatmap hidden" aria-label="All-time missed keys"></div>
+      <div class="menu-actions">
+        <button type="button" id="btn-sound" aria-pressed="true">Sound: on</button>
+        <button type="button" id="btn-reset">Reset progress</button>
+      </div>
+      <p class="legend-key" aria-hidden="true">
+        <span class="swatch target"></span> target
+        <span class="swatch hold"></span> hold Fn
+        <span class="swatch shift"></span> shift
+      </p>
     </section>
 
-    <section id="screen-game" class="screen hidden">
+    <section id="screen-game" class="screen hidden" aria-label="Typing stage" aria-hidden="true">
       <header id="game-header">
-        <button id="btn-quit">&larr; Menu</button>
+        <button type="button" id="btn-quit">&larr; Menu</button>
         <h2 id="game-stage-name"></h2>
-        <div id="live-stats">
+        <span id="game-board-label" class="game-board-label"></span>
+        <div id="live-stats" aria-live="off">
           <span id="live-wpm">0 wpm</span>
           <span id="live-acc">100%</span>
           <span id="live-progress"></span>
         </div>
       </header>
-      <div id="prompt"></div>
+      <div id="prompt" role="text"></div>
       <div id="keyboard"></div>
       <p id="layer-hint"></p>
+      <p id="coach-tip" class="coach-tip"></p>
+      <p class="pause-hint">Esc pauses · window blur also pauses</p>
+
+      <div id="pause-overlay" class="pause-overlay hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="pause-title">
+        <div class="pause-card">
+          <h2 id="pause-title">Paused</h2>
+          <p>Timer is frozen. Press Escape or Resume to continue.</p>
+          <button type="button" id="btn-resume">Resume</button>
+        </div>
+      </div>
     </section>
 
-    <section id="screen-results" class="screen hidden">
+    <section id="screen-results" class="screen hidden" aria-label="Stage results" aria-hidden="true">
       <h2 id="results-title"></h2>
       <div id="results-stats"></div>
+      <div id="results-note"></div>
       <div id="results-mistakes"></div>
       <div id="results-actions">
-        <button id="btn-retry">Retry</button>
-        <button id="btn-next" class="hidden">Next stage &rarr;</button>
-        <button id="btn-menu">Menu</button>
+        <button type="button" id="btn-retry">Retry</button>
+        <button type="button" id="btn-next" class="hidden">Next stage &rarr;</button>
+        <button type="button" id="btn-menu">Menu</button>
       </div>
     </section>
   </main>

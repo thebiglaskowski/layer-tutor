@@ -1,4 +1,8 @@
 // Pure typing state machine. No DOM, no timers — callers pass timestamps in.
+//
+// WPM timing starts on the first *correct* keystroke so early fumbles do not
+// zero out the clock before the learner has begun the line. Errors before
+// that still count toward accuracy and the mistake map.
 
 export function createGame(items) {
   return {
@@ -25,9 +29,9 @@ export function currentChar(game) {
 
 export function handleKey(game, ch, now) {
   if (game.done) return 'ignored';
-  if (game.startTime === null) game.startTime = now;
   const target = currentChar(game);
   if (ch === target) {
+    if (game.startTime === null) game.startTime = now;
     game.correct += 1;
     game.cursor += 1;
     if (game.cursor >= game.items[game.itemIndex].length) {
@@ -41,6 +45,7 @@ export function handleKey(game, ch, now) {
     }
     return 'correct';
   }
+  // Wrong key: count error even before the WPM clock starts.
   game.errors += 1;
   game.mistakes[target] = (game.mistakes[target] ?? 0) + 1;
   return 'error';

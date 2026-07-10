@@ -1,0 +1,66 @@
+# Cloudflare / Wrangler local state (root + nested)
+.wrangler/
+**/.wrangler/
+.mf/
+.dev.vars
+.dev.vars.*
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# Local deploy staging
+/tmp-deploy/
+.deploy-staging/
+.tmp/
+
+# Env / secrets / credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.credentials/
+secrets/
+
+# Claude / agent local overrides (keep project CLAUDE.md if you add one)
+.claude/settings.local.json
+.claude/*.local.*
+
+# Superpowers / agent session scratch (not source of truth)
+.superpowers/sdd/
+
+# Logs & coverage
+logs/
+*.log
+coverage/
+.nyc_output/
+
+# Python (if scripts ever grow a venv)
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Misc junk
+*.bak
+*.tmp
+*.orig
+.cache/

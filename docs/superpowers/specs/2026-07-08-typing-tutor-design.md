@@ -1,7 +1,7 @@
 # Split-Keyboard Layer Typing Tutor — Design
 
 Date: 2026-07-08
-Status: Approved for planning
+Status: Implemented (expanded 2026-07-10 — 12 stages, large pools, PWA polish)
 
 ## Problem
 
@@ -56,26 +56,31 @@ Bottom: (unused, left)        |       _  +  {  }  |  ~   (shifted pairs,
 bootloader. Not typing content — referenced once in-app as a footnote,
 never drilled.
 
-## Curriculum — 9 progressive stages
+## Curriculum — 12 progressive stages
 
 Stages unlock in order; a stage unlocks the next once you clear it at
-≥90% accuracy. You can always replay any unlocked stage.
+≥90% accuracy. A **fluent** badge is awarded at ≥90% accuracy **and**
+≥25 WPM. You can always replay any unlocked stage, or run **Practice**
+(3× round size, no unlock side-effects). Large pools (~10× the original
+item counts) live in `lessonPools.js` so replays rarely feel identical.
 
-| # | Stage | Layer(s) | Content | Example items |
-|---|-------|----------|---------|----------------|
-| 1 | Home row | 0 | `a s d f g` / `h j k l ; '` only | "dad", "flask", "half" |
-| 2 | Top row | 0 | adds `q w e r t` / `y u i o p` | "quiet", "true", "your" |
-| 3 | Bottom row | 0 | adds `z x c v b` / `n m , . /` | "zebra", "move", "can't." |
-| 4 | All letters | 0 | full sentences, all rows mixed | "The quick fox jumps." |
-| 5 | Numbers | 1 (hold left thumb) | digit groups, no symbols | "2024", "90210", "8675309" |
-| 6 | Navigation | 1 (hold left thumb) | arrow-key sequences (hjkl-mapped) | ← → ↑ ↓ ↓ ← sequences |
-| 7 | Shifted symbols | 0 + 2 (hold right thumb) | `! @ # $ % ^ & * ( )` mixed with letters | "50%", "A&B", "@home" |
-| 8 | Punctuation/brackets | 0 + 2 (hold right thumb) | `` - = [ ] \ ` _ + { } | ~ `` mixed with letters | "[array]", "a-b", "x=y", "{key}" |
-| 9 | Mixed mastery | 0 + 1 + 2 | realistic mixed text exercising rapid layer switching | `"let x = 42;"`, `"$19.99"`, `"123 Main St."` |
+| # | Stage | Layer(s) | Content |
+|---|-------|----------|---------|
+| 1 | Home row | 0 | `a s d f g h j k l` (+ multi-word drills) |
+| 2 | Top row | 0 | adds top-row letters |
+| 3 | Bottom row | 0 | adds bottom-row letters + `, . /` |
+| 4 | Left hand only | 0 | left-half island (split pedagogy) |
+| 5 | Right hand only | 0 | right-half island |
+| 6 | Full sentences | 0 | mixed sentences, both hands |
+| 7 | Numbers | 1 (left Fn) | digit groups |
+| 8 | Navigation | 1 (left Fn) | arrows on HJKL |
+| 9 | Symbol layer | 0 + 2 (right Fn) | `!@#$%^&*()` — no Shift required on this board |
+| 10 | Brackets & punctuation | 0 + 2 (right Fn) | ``-=[]\`_+{}|~`` |
+| 11 | Layer transitions | 0 + 1 + 2 | rapid hold/release mid-token |
+| 12 | Mixed mastery | 0 + 1 + 2 | realistic mixed text |
 
-Real words/sentences for letter stages (1–4); realistic strings (not
-random characters) for number/symbol/mixed stages, since pure random
-digit/symbol soup doesn't exist in real typing and is less engaging.
+Each stage carries a short **coach tip** (thumb home position, hold-then-press,
+vim arrows, etc.).
 
 ## Gameplay mechanics
 

@@ -1,7 +1,7 @@
 {
   "name": "Layer Tutor",
   "short_name": "Layer Tutor",
-  "description": "Typing tutor for a layered QMK split keyboard",
+  "description": "Typing tutor for layered QMK split keyboards — Corne V4 (40% 3×6 ortholinear) and more",
   "start_url": ".",
   "display": "standalone",
   "orientation": "any",

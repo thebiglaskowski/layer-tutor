@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { charToKey, KEYS, LAYER_HOLD, SHIFT_KEY } from '../js/keyboardLayout.js';
+import {
+  charToKey, KEYS, LAYER_HOLD, SHIFT_KEY, SHIFT_KEYS,
+  assertUniqueCharMap, shiftKeysFor,
+} from '../js/keyboardLayout.js';
 
 test('base-layer letters map to layer 0 without shift', () => {
   assert.deepEqual(charToKey('a'), { keyId: 'L11', layer: 0, shift: false });
@@ -60,8 +63,8 @@ test('unmappable characters return null', () => {
   assert.equal(charToKey('\t'), null);
 });
 
-test('layer hold keys and shift key exist in KEYS', () => {
-  for (const id of [...Object.values(LAYER_HOLD), SHIFT_KEY]) {
+test('layer hold keys and both shift keys exist in KEYS', () => {
+  for (const id of [...Object.values(LAYER_HOLD), ...SHIFT_KEYS, SHIFT_KEY]) {
     assert.ok(KEYS.some((k) => k.id === id), `missing key ${id}`);
   }
 });
@@ -69,4 +72,14 @@ test('layer hold keys and shift key exist in KEYS', () => {
 test('KEYS has 46 keys (23 per half)', () => {
   assert.equal(KEYS.length, 46);
   assert.equal(KEYS.filter((k) => k.half === 'L').length, 23);
+});
+
+test('CHAR_MAP has no single-char legend conflicts', () => {
+  assert.equal(assertUniqueCharMap(), true);
+});
+
+test('shiftKeysFor prefers the hand that owns the letter', () => {
+  assert.deepEqual(shiftKeysFor(charToKey('A')), ['L20']);
+  assert.deepEqual(shiftKeysFor(charToKey('Y')), ['R10']);
+  assert.deepEqual(shiftKeysFor(charToKey('a')), []);
 });

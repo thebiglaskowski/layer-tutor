@@ -1,36 +1,27 @@
 // Renders the split-keyboard diagram and highlights the current target.
-// The only DOM module besides ui.js/main.js.
 //
 // Layout is geometry-driven to mirror the physical board: every key has an
 // explicit position/size/rotation in key-pitch units ("u"), and the case is
 // one continuous SVG outline that steps with the column stagger and wraps
 // the fanned thumb cluster. The right half is a mirror of the left.
+//
+// State is closed over per mount (no module-global key map).
 
-import { KEYS, LAYER_HOLD, SHIFT_KEY } from './keyboardLayout.js';
+import { PRIMARY_BOARD } from './keyboardLayout.js';
 
-const keyEls = new Map();
-
-const U = 3.55;        // rem per key pitch
-const KEY_GAP = 0.35;  // rem of breathing room inside each pitch cell
-
-// Per-column vertical offset (u), from the photo: middle-finger column
-// highest, pinky/outer columns lower, inner extra column lowest.
+const U = 3.55;
+const KEY_GAP = 0.35;
 const CO = [0.55, 0.40, 0.12, 0, 0.15, 0.28, 0.65];
-const PAD = 0.30;      // case padding around keys (u)
+const PAD = 0.30;
 
-// Left-half thumb cluster: fans clockwise toward the inner edge; the
-// innermost key (Space) is a tall portrait key tucked under the inner column.
 const THUMB_GEOM_L = {
   L33: { x: 3.45, y: 3.30, w: 1, h: 1, r: 6 },
   L34: { x: 4.58, y: 3.46, w: 1, h: 1, r: 14 },
   L35: { x: 5.75, y: 2.85, w: 1, h: 1.85, r: 22 },
 };
-// Right thumbs mirror left ones (Enter <-> Space, Fn <-> Fn, Win <-> Ctrl).
 const THUMB_MIRROR = { R33: 'L35', R34: 'L34', R35: 'L33' };
 
 function visualColOf(key) {
-  // Right-half bottom letter row's missing key is at the inner edge (col 0),
-  // not the outer edge, so every stored col shifts right by one.
   if (key.half === 'R' && key.row === 2) return key.col + 1;
   return key.col;
 }
@@ -46,8 +37,6 @@ function geomFor(key) {
   return { x: vc, y: off + key.row, w: 1, h: 1, r: 0 };
 }
 
-// Case outline for the left half (u coords, clockwise). Top edge steps with
-// the column stagger; the bottom-right wraps the thumb fan.
 const CASE_L = [
   [-PAD, CO[0] - PAD],
   [1, CO[0] - PAD], [1, CO[1] - PAD],
@@ -67,7 +56,6 @@ const CASE_L = [
   [-PAD, CO[0] + 3 + PAD],
 ];
 
-// Overall drawing bounds (u), shared by both halves.
 const MIN_Y = CO[3] - PAD;
 const MAX_Y = 5.35;
 const MIN_X = -PAD;
@@ -97,7 +85,6 @@ function roundedPath(pts, radius) {
 }
 
 function caseSvg(half) {
-  // 100 path units per u; mirror the left outline for the right half.
   const pts = CASE_L.map(([x, y]) => {
     const px = half === 'L' ? x : 7 - x;
     return [(px - MIN_X) * 100, (y - MIN_Y) * 100];
@@ -106,6 +93,7 @@ function caseSvg(half) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('class', 'kb-case');
   svg.setAttribute('viewBox', `0 0 ${WIDTH_U * 100} ${HEIGHT_U * 100}`);
+  svg.setAttribute('aria-hidden', 'true');
   svg.innerHTML = `
     <defs>
       <linearGradient id="${gradId}" x1="0" y1="0" x2="0.35" y2="1">
@@ -124,8 +112,6 @@ function leftGlow(col) {
 }
 
 function rightGlow(col) {
-  // purple -> magenta -> red -> orange -> green, unwrapped so it can be
-  // interpolated linearly and let CSS wrap the final value mod 360.
   const stops = [270, 330, 375, 410, 480];
   const t = (col / 6) * (stops.length - 1);
   const i = Math.min(stops.length - 2, Math.floor(t));
@@ -139,9 +125,25 @@ function glowFor(key, geom) {
   return key.half === 'L' ? leftGlow(col) : rightGlow(col);
 }
 
-export function renderKeyboard(container) {
+/**
+ * Mount a keyboard into `container`.
+ * @param {HTMLElement} container
+ * @param {object} [board] board from the registry (defaults to Corne V4)
+ * @returns {{ highlightTarget: (target: object|null) => void, destroy: () => void }}
+ */
+export function renderKeyboard(container, board = PRIMARY_BOARD) {
+  const KEYS = board.KEYS;
+  const LAYER_HOLD = board.LAYER_HOLD;
+  const shiftKeysFor = board.shiftKeysFor.bind(board);
+
+  const keyEls = new Map();
   container.innerHTML = '';
-  keyEls.clear();
+  container.setAttribute('role', 'img');
+  container.setAttribute(
+    'aria-label',
+    `${board.name || 'Split'} keyboard diagram showing the target key`,
+  );
+
   for (const half of ['L', 'R']) {
     const halfEl = document.createElement('div');
     halfEl.className = `kb-half kb-half-${half}`;
@@ -160,32 +162,81 @@ export function renderKeyboard(container) {
       el.style.height = `${(g.h * U - KEY_GAP).toFixed(2)}rem`;
       if (g.r) el.style.setProperty('--rot', `${g.r}deg`);
       el.style.setProperty('--glow', glowFor(key, g));
+
+      const legend = document.createElement('span');
+      legend.className = 'kb-legend';
+      el.appendChild(legend);
+
+      const badge = document.createElement('span');
+      badge.className = 'kb-badge';
+      badge.hidden = true;
+      el.appendChild(badge);
+
       halfEl.appendChild(el);
       keyEls.set(key.id, el);
     }
     container.appendChild(halfEl);
   }
+
+  function setDisplayLayer(layer) {
+    for (const key of KEYS) {
+      const el = keyEls.get(key.id);
+      const text = key.legends[layer];
+      const legendEl = el.querySelector('.kb-legend');
+      legendEl.textContent = text ?? '';
+      el.classList.toggle('kb-key-blank', text == null);
+      el.classList.toggle('kb-key-wide-legend', (text ?? '').length > 1);
+    }
+  }
+
+  function clearHighlights() {
+    for (const el of keyEls.values()) {
+      el.classList.remove('kb-target', 'kb-hold', 'kb-shift');
+      const badge = el.querySelector('.kb-badge');
+      badge.hidden = true;
+      badge.textContent = '';
+    }
+  }
+
+  function highlightTarget(target) {
+    clearHighlights();
+    if (!target) {
+      setDisplayLayer(0);
+      return;
+    }
+    setDisplayLayer(target.layer);
+    keyEls.get(target.keyId)?.classList.add('kb-target');
+
+    if (target.layer > 0) {
+      const holdEl = keyEls.get(LAYER_HOLD[target.layer]);
+      if (holdEl) {
+        holdEl.classList.add('kb-hold');
+        const badge = holdEl.querySelector('.kb-badge');
+        badge.hidden = false;
+        badge.textContent = 'HOLD FN';
+      }
+    }
+    if (target.shift) {
+      for (const id of shiftKeysFor(target)) {
+        const shiftEl = keyEls.get(id);
+        if (shiftEl) {
+          shiftEl.classList.add('kb-shift');
+          const badge = shiftEl.querySelector('.kb-badge');
+          badge.hidden = false;
+          badge.textContent = 'SHIFT';
+        }
+      }
+    }
+  }
+
   setDisplayLayer(0);
-}
 
-function setDisplayLayer(layer) {
-  for (const key of KEYS) {
-    const el = keyEls.get(key.id);
-    const legend = key.legends[layer];
-    el.textContent = legend ?? '';
-    el.classList.toggle('kb-key-blank', legend == null);
-    el.classList.toggle('kb-key-wide-legend', (legend ?? '').length > 1);
-  }
-}
-
-export function highlightTarget(target) {
-  for (const el of keyEls.values()) el.classList.remove('kb-target', 'kb-hold');
-  if (!target) {
-    setDisplayLayer(0);
-    return;
-  }
-  setDisplayLayer(target.layer);
-  keyEls.get(target.keyId)?.classList.add('kb-target');
-  if (target.layer > 0) keyEls.get(LAYER_HOLD[target.layer])?.classList.add('kb-hold');
-  if (target.shift) keyEls.get(SHIFT_KEY)?.classList.add('kb-hold');
+  return {
+    highlightTarget,
+    destroy() {
+      clearHighlights();
+      keyEls.clear();
+      container.innerHTML = '';
+    },
+  };
 }

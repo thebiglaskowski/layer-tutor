@@ -1,91 +1,211 @@
 // App bootstrap and game orchestration.
 
-import { STAGES, buildRound } from './lessons.js';
-import { charToKey } from './keyboardLayout.js';
+import { STAGES, buildRound, practiceRoundSize, PASS_ACCURACY } from './lessons.js';
+import {
+  getBoard,
+  listPlayableBoards,
+  DEFAULT_BOARD_ID,
+  boardFullLabel,
+} from './boards/index.js';
 import { createGame, currentItem, currentChar, handleKey, stats } from './gameEngine.js';
-import { createStorage, PASS_ACCURACY } from './storage.js';
-import { renderKeyboard, highlightTarget } from './keyboardRenderer.js';
+import { createStorage } from './storage.js';
+import { renderKeyboard } from './keyboardRenderer.js';
+import * as sound from './sound.js';
 import * as ui from './ui.js';
 
-const storage = createStorage(STAGES.map((s) => s.id));
-let progress = storage.load();
+const storage = createStorage(STAGES.map((s) => s.id), globalThis.localStorage, {
+  defaultBoardId: DEFAULT_BOARD_ID,
+});
+
+let activeBoard = getBoard(storage.getActiveBoardId());
+let progress = storage.load(activeBoard.id);
 let stage = null;
 let game = null;
+let practice = false;
 let tickTimer = null;
+let kb = null;
+let paused = false;
+let pauseStartedAt = null;
+let pausedAccumMs = 0;
 
 const ARROWS = { ArrowLeft: '←', ArrowDown: '↓', ArrowUp: '↑', ArrowRight: '→' };
 
-function goMenu() {
-  stopTick();
-  game = null;
-  ui.renderMenu(progress, startStage);
-  ui.showScreen('screen-menu');
+sound.initSoundFromStorage();
+
+function now() {
+  return Date.now() - pausedAccumMs;
 }
 
-function startStage(s) {
+function goMenu() {
+  stopTick();
+  setPaused(false);
+  game = null;
+  practice = false;
+  stage = null;
+  kb?.destroy();
+  kb = null;
+  ui.renderMenu(progress, startStage, storage.topMisses(10, activeBoard.id), {
+    boards: listPlayableBoards(),
+    activeBoard,
+    onBoardChange: switchBoard,
+  });
+  ui.showScreen('screen-menu');
+  syncSoundToggle();
+}
+
+function switchBoard(boardId) {
+  if (boardId === activeBoard.id) return;
+  activeBoard = getBoard(boardId);
+  progress = storage.setActiveBoard(activeBoard.id);
+  ui.announce(`Board: ${boardFullLabel(activeBoard)}`);
+  goMenu();
+}
+
+function startStage(s, opts = {}) {
   stage = s;
-  game = createGame(buildRound(s));
-  document.getElementById('game-stage-name').textContent = s.name;
+  practice = !!opts.practice;
+  pausedAccumMs = 0;
+  pauseStartedAt = null;
+  paused = false;
+  ui.setPaused(false);
+
+  const count = practice ? practiceRoundSize(s) : s.roundSize;
+  game = createGame(buildRound(s, Math.random, count));
+
+  const nameEl = document.getElementById('game-stage-name');
+  nameEl.textContent = practice ? `${s.name} · practice` : s.name;
   document.getElementById('layer-hint').textContent = s.layerHint;
+  document.getElementById('coach-tip').textContent = s.coachTip;
+  const boardChip = document.getElementById('game-board-label');
+  if (boardChip) boardChip.textContent = activeBoard.name;
+
   ui.showScreen('screen-game');
-  renderKeyboard(document.getElementById('keyboard'));
+  kb?.destroy();
+  kb = renderKeyboard(document.getElementById('keyboard'), activeBoard);
   refresh();
   startTick();
+  ui.announce(practice
+    ? `Practice mode on ${activeBoard.name}: ${s.name}. ${s.coachTip}`
+    : `Starting ${s.name} on ${activeBoard.name}. ${s.coachTip}`);
 }
 
 function refresh() {
   const item = currentItem(game);
   if (item == null) return;
   ui.renderPrompt(item, game.cursor);
-  highlightTarget(charToKey(currentChar(game)));
-  ui.renderLiveStats(stats(game), `${game.itemIndex + 1}/${game.items.length}`);
+  kb?.highlightTarget(activeBoard.charToKey(currentChar(game)));
+  const label = practice ? `practice ${game.itemIndex + 1}/${game.items.length}` : `${game.itemIndex + 1}/${game.items.length}`;
+  ui.renderLiveStats(stats(game, now()), label);
 }
 
 function startTick() {
+  stopTick();
   tickTimer = setInterval(() => {
-    if (game && !game.done && game.startTime !== null) {
-      ui.renderLiveStats(stats(game), `${game.itemIndex + 1}/${game.items.length}`);
+    if (game && !game.done && !paused && game.startTime !== null) {
+      const label = practice ? `practice ${game.itemIndex + 1}/${game.items.length}` : `${game.itemIndex + 1}/${game.items.length}`;
+      ui.renderLiveStats(stats(game, now()), label);
     }
   }, 1000);
 }
 
 function stopTick() {
-  clearInterval(tickTimer);
+  if (tickTimer != null) {
+    clearInterval(tickTimer);
+    tickTimer = null;
+  }
+}
+
+function setPaused(on) {
+  if (on === paused) return;
+  if (on) {
+    if (!game || game.done) return;
+    paused = true;
+    pauseStartedAt = Date.now();
+    ui.setPaused(true);
+    ui.announce('Paused. Press Escape or click Resume.');
+  } else {
+    if (pauseStartedAt != null) {
+      pausedAccumMs += Date.now() - pauseStartedAt;
+      pauseStartedAt = null;
+    }
+    paused = false;
+    ui.setPaused(false);
+  }
 }
 
 function finishStage() {
   stopTick();
-  const s = stats(game);
-  const { data } = storage.saveResult(stage.id, s.wpm, s.accuracy);
+  setPaused(false);
+  sound.playDone();
+  const s = stats(game, now());
+  const { data, fluentNow } = storage.saveResult(
+    stage.id,
+    s.wpm,
+    s.accuracy,
+    game.mistakes,
+    { practice, boardId: activeBoard.id },
+  );
   progress = data;
   const idx = STAGES.indexOf(stage);
   const passed = s.accuracy >= PASS_ACCURACY;
   const hasNext = idx + 1 < STAGES.length && progress.stages[STAGES[idx + 1].id].unlocked;
-  ui.renderResults(stage, s, game.mistakes, passed, hasNext);
+  const fluent = progress.stages[stage.id]?.fluent;
+  ui.renderResults(stage, s, game.mistakes, {
+    passed,
+    hasNext,
+    practice,
+    fluent,
+    fluentNow,
+    boardName: activeBoard.name,
+  });
   ui.showScreen('screen-results');
+  ui.announce(passed
+    ? `Stage complete. ${s.wpm} words per minute, ${s.accuracy} percent accuracy.`
+    : `Stage finished below unlock threshold. ${s.accuracy} percent accuracy.`);
+}
+
+function isGameScreen() {
+  return !document.getElementById('screen-game').classList.contains('hidden');
 }
 
 document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isGameScreen() && game && !game.done) {
+    e.preventDefault();
+    setPaused(!paused);
+    return;
+  }
+
+  if (paused) return;
   if (e.repeat) return;
   if (!game || game.done) return;
-  if (document.getElementById('screen-game').classList.contains('hidden')) return;
+  if (!isGameScreen()) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
+
   const ch = ARROWS[e.key] ?? (e.key.length === 1 ? e.key : null);
   if (ch === null) return;
   e.preventDefault();
-  const result = handleKey(game, ch, Date.now());
+
+  const result = handleKey(game, ch, now());
   if (result === 'error') {
+    sound.playError();
     ui.flashError();
+    ui.renderLiveStats(stats(game, now()), practice
+      ? `practice ${game.itemIndex + 1}/${game.items.length}`
+      : `${game.itemIndex + 1}/${game.items.length}`);
     return;
   }
   if (result === 'done') {
     finishStage();
     return;
   }
+  sound.playCorrect();
   refresh();
 });
 
-// Reset is two-click: first click arms it for 3 seconds, second click wipes.
+window.addEventListener('blur', () => {
+  if (game && !game.done && isGameScreen()) setPaused(true);
+});
+
 const resetBtn = document.getElementById('btn-reset');
 let resetArmed = null;
 
@@ -99,20 +219,35 @@ function disarmReset() {
 resetBtn.addEventListener('click', () => {
   if (resetArmed) {
     disarmReset();
-    progress = storage.reset();
-    ui.renderMenu(progress, startStage);
+    progress = storage.reset(activeBoard.id);
+    goMenu();
+    ui.announce(`Progress reset for ${activeBoard.name}.`);
   } else {
-    resetBtn.textContent = 'Click again to wipe all progress';
+    resetBtn.textContent = `Click again to wipe ${activeBoard.name} progress`;
     resetBtn.classList.add('armed');
     resetArmed = setTimeout(disarmReset, 3000);
   }
 });
 
+function syncSoundToggle() {
+  const btn = document.getElementById('btn-sound');
+  if (!btn) return;
+  const on = sound.isSoundEnabled();
+  btn.textContent = on ? 'Sound: on' : 'Sound: off';
+  btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
+document.getElementById('btn-sound')?.addEventListener('click', () => {
+  sound.setSoundEnabled(!sound.isSoundEnabled());
+  syncSoundToggle();
+});
+
 document.getElementById('btn-quit').addEventListener('click', goMenu);
 document.getElementById('btn-menu').addEventListener('click', goMenu);
-document.getElementById('btn-retry').addEventListener('click', () => startStage(stage));
+document.getElementById('btn-retry').addEventListener('click', () => startStage(stage, { practice }));
 document.getElementById('btn-next').addEventListener('click', () => {
-  startStage(STAGES[STAGES.indexOf(stage) + 1]);
+  startStage(STAGES[STAGES.indexOf(stage) + 1], { practice: false });
 });
+document.getElementById('btn-resume')?.addEventListener('click', () => setPaused(false));
 
 goMenu();

@@ -1,6 +1,7 @@
 // Offline support: network-first with cache fallback, so updates land
 // immediately when online and the app still works with no connection.
-const CACHE = 'layer-tutor-v1';
+// Bump CACHE when shipping a release so activate() drops the old bucket.
+const CACHE = 'layer-tutor-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -10,9 +11,14 @@ const ASSETS = [
   './js/ui.js',
   './js/keyboardLayout.js',
   './js/lessons.js',
+  './js/lessonPools.js',
   './js/gameEngine.js',
   './js/storage.js',
   './js/keyboardRenderer.js',
+  './js/sound.js',
+  './js/boards/index.js',
+  './js/boards/corne-v4.js',
+  './js/boards/buildLayout.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];
@@ -36,8 +42,11 @@ self.addEventListener('fetch', (e) => {
   e.respondWith(
     fetch(e.request)
       .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
+        // Only cache successful same-origin-ish GETs — never 404/500.
+        if (res && res.ok && res.type !== 'error') {
+          const copy = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, copy));
+        }
         return res;
       })
       .catch(() => caches.match(e.request)),

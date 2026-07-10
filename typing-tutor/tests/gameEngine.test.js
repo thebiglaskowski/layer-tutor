@@ -29,11 +29,13 @@ test('completing all items sets done and endTime; further keys ignored', () => {
   assert.equal(handleKey(g, 'a', 600), 'ignored');
 });
 
-test('startTime is set on the first keystroke, even a wrong one', () => {
+test('startTime is set on the first correct keystroke, not an error', () => {
   const g = createGame(['a']);
   assert.equal(g.startTime, null);
   handleKey(g, 'x', 1000);
-  assert.equal(g.startTime, 1000);
+  assert.equal(g.startTime, null);
+  handleKey(g, 'a', 1500);
+  assert.equal(g.startTime, 1500);
 });
 
 test('wpm and accuracy math', () => {
@@ -50,14 +52,20 @@ test('wpm and accuracy math', () => {
 
 test('accuracy counts errors', () => {
   const g = createGame(['ab']);
-  handleKey(g, 'x', 0);      // error
-  handleKey(g, 'a', 100);
-  handleKey(g, 'b', 60000);  // done at 1 minute
+  handleKey(g, 'x', 0);      // error — no clock yet
+  handleKey(g, 'a', 100);    // clock starts
+  handleKey(g, 'b', 60100);  // done at +60s from start
   const s = stats(g);
   assert.equal(s.accuracy, 66.7); // 2 correct / 3 keystrokes
 });
 
-test('stats before first keystroke are zero-safe', () => {
+test('stats before first correct keystroke are zero-safe', () => {
+  const g = createGame(['ab']);
+  handleKey(g, 'x', 0);
+  assert.deepEqual(stats(g, 5000), { wpm: 0, accuracy: 0 }); // 0 correct / 1 error
+});
+
+test('stats with no keystrokes at all stay 100 accuracy', () => {
   const g = createGame(['ab']);
   assert.deepEqual(stats(g, 5000), { wpm: 0, accuracy: 100 });
 });
