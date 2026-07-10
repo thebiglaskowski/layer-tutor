@@ -266,12 +266,90 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
 
   paintBaseLegends();
 
+  const HOME_IDS = new Set(['L11', 'L12', 'L13', 'L14', 'R11', 'R12', 'R13', 'R14']);
+
+  function setHomeGhost(on) {
+    for (const id of HOME_IDS) {
+      keyEls.get(id)?.classList.toggle('kb-home-ghost', !!on);
+    }
+  }
+
+  function setFocusMode(on, needsHold) {
+    container.classList.toggle('kb-focus-mode', !!on);
+    container.classList.toggle('kb-focus-expanded', !!(on && needsHold));
+  }
+
+  function setCollapsed(on) {
+    container.classList.toggle('kb-collapsed', !!on);
+  }
+
+  /** Flash the key the user actually hit (if mappable). */
+  function flashWrong(wrongCh, charToKeyFn) {
+    if (wrongCh == null || !charToKeyFn) return;
+    const m = charToKeyFn(wrongCh);
+    if (!m) return;
+    const el = keyEls.get(m.keyId);
+    if (!el) return;
+    el.classList.remove('kb-wrong-flash');
+    void el.offsetWidth;
+    el.classList.add('kb-wrong-flash');
+    setTimeout(() => el.classList.remove('kb-wrong-flash'), 280);
+  }
+
+  /** Paint miss intensity as opacity on keycaps (0–1 scale from heatmap). */
+  function paintHeatmap(heatmap) {
+    const vals = Object.values(heatmap || {}).filter((n) => n > 0);
+    const max = vals.length ? Math.max(...vals) : 0;
+    for (const key of KEYS) {
+      const el = keyEls.get(key.id);
+      el?.style.removeProperty('--heat');
+      el?.classList.remove('kb-heat');
+    }
+    if (!max) return;
+    // Map single-char base/layer legends back to keys via first match in KEYS legends
+    for (const [ch, n] of Object.entries(heatmap || {})) {
+      if (!n) continue;
+      // Find key whose any single-char legend matches
+      for (const key of KEYS) {
+        for (const layer of [0, 1, 2]) {
+          const leg = key.legends[layer];
+          if (!leg) continue;
+          const match = layer === 0 ? leg.toLowerCase() === ch || leg === ch : leg === ch;
+          if (match || (ch === ' ' && key.id === (board.KEYS.find((k) => k.legends[0] === 'Space')?.id))) {
+            const el = keyEls.get(key.id);
+            if (el) {
+              const t = Math.min(1, n / max);
+              el.style.setProperty('--heat', String(0.15 + t * 0.75));
+              el.classList.add('kb-heat');
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+
   return {
     highlightTarget,
+    setHomeGhost,
+    setFocusMode,
+    setCollapsed,
+    flashWrong,
+    paintHeatmap,
+    paintBaseLegends,
     destroy() {
       clearHighlights();
       keyEls.clear();
       container.innerHTML = '';
     },
   };
+}
+
+/** Standalone mini heatmap board for the menu (reuses geometry via renderKeyboard). */
+export function renderHeatmapBoard(container, board, heatmap) {
+  const ctrl = renderKeyboard(container, board);
+  ctrl.paintHeatmap(heatmap);
+  ctrl.setHomeGhost(false);
+  container.classList.add('kb-heatmap-view');
+  return ctrl;
 }

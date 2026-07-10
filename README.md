@@ -23,14 +23,14 @@ Live: https://layer-tutor.pages.dev
 
 ## Curriculum
 
-12 progressive stages: base letters → left/right hand islands → full sentences →
-left-Fn numbers & arrows → right-Fn symbols & brackets → layer transitions →
-mixed real-world text.
+15 progressive stages: home row → bigrams → top/bottom → left/right hands →
+sentences → numbers/nav/hold drill → symbols/punctuation → pulse drill →
+layer transitions → mixed mastery.
 
 - **Unlock:** ≥90% accuracy clears the next stage  
 - **Fluent badge:** ≥90% accuracy **and** ≥25 WPM  
-- **Practice:** longer free rounds (no unlock side-effects)  
-- **Heatmap:** rolling per-key misses (per board)  
+- **Practice / weak-key drill / sandbox / custom lists**  
+- **Heatmap** + mini keyboard, streaks, goals, notes, export/import  
 - Large pools so replays rarely feel identical  
 
 ## Run locally

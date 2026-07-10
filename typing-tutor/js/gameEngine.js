@@ -48,7 +48,20 @@ export function handleKey(game, ch, now) {
   // Wrong key: count error even before the WPM clock starts.
   game.errors += 1;
   game.mistakes[target] = (game.mistakes[target] ?? 0) + 1;
+  game.lastWrong = ch;
   return 'error';
+}
+
+/** Total characters remaining including current item (for progress bar). */
+export function progressCounts(game) {
+  let total = 0;
+  let done = 0;
+  for (let i = 0; i < game.items.length; i++) {
+    total += game.items[i].length;
+    if (i < game.itemIndex) done += game.items[i].length;
+    else if (i === game.itemIndex) done += game.cursor;
+  }
+  return { done, total, frac: total > 0 ? done / total : 0 };
 }
 
 export function stats(game, now = Date.now()) {

@@ -16,6 +16,35 @@
   <div id="aria-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
   <main id="app">
+    <!-- ========== ONBOARDING ========== -->
+    <section id="screen-onboarding" class="screen hidden" aria-label="Welcome" aria-hidden="true">
+      <h1>Layer Tutor</h1>
+      <p class="subtitle">Learn your split keyboard, layer by layer</p>
+      <ol class="onboard-steps">
+        <li>
+          <strong>Your board</strong>
+          <p id="onboard-board-label">CORNE V4 · 40% 3×6 ortholinear</p>
+        </li>
+        <li>
+          <strong>Legend</strong>
+          <p class="legend-key">
+            <span class="swatch target"></span> target
+            <span class="swatch hold"></span> hold Fn
+            <span class="swatch shift"></span> shift
+          </p>
+        </li>
+        <li>
+          <strong>Try it</strong>
+          <p>Type the five keys below. Space uses the left thumb.</p>
+          <div id="onboard-prompt" class="onboard-prompt" role="textbox" tabindex="0"></div>
+          <p id="onboard-status" class="onboard-status">Press keys: a · space · s · d · f</p>
+        </li>
+      </ol>
+      <button type="button" id="btn-onboard-skip" class="btn-secondary">Skip intro</button>
+      <button type="button" id="btn-onboard-done" class="hidden">Start Home Row →</button>
+    </section>
+
+    <!-- ========== MENU ========== -->
     <section id="screen-menu" class="screen" aria-label="Stage menu">
       <h1>Layer Tutor</h1>
       <p class="subtitle">Learn your split keyboard, layer by layer</p>
@@ -26,21 +55,52 @@
         <p id="board-product" class="board-product"></p>
       </div>
 
-      <p class="menu-help">Arrow keys move between stages · Enter plays · Practice runs a longer free round without changing unlocks · Progress is saved per keyboard</p>
-      <ol id="stage-list"></ol>
-      <div id="heatmap" class="heatmap hidden" aria-label="All-time missed keys"></div>
-      <div class="menu-actions">
-        <button type="button" id="btn-sound" aria-pressed="true">Sound: on</button>
-        <button type="button" id="btn-reset">Reset progress</button>
+      <div id="today-focus" class="today-focus" hidden></div>
+      <div id="streak-bar" class="streak-bar" hidden></div>
+
+      <div class="quick-actions">
+        <button type="button" id="btn-weak-keys">Practice weak keys</button>
+        <button type="button" id="btn-sandbox">Sandbox</button>
+        <button type="button" id="btn-cheat-sheet">Layer map</button>
       </div>
+
+      <p class="menu-help">Arrow keys move between stages · Enter plays · Practice = longer free round · Progress is per keyboard</p>
+      <div id="stage-list"></div>
+
+      <div id="heatmap-section" class="heatmap-section hidden">
+        <h2 class="heatmap-title">Miss heatmap</h2>
+        <div id="heatmap-board" class="heatmap-board"></div>
+        <div id="heatmap" class="heatmap" aria-label="All-time missed keys"></div>
+      </div>
+
+      <details class="settings-panel">
+        <summary>Settings &amp; data</summary>
+        <div class="settings-grid">
+          <label class="toggle"><input type="checkbox" id="set-focus-mode" checked> Focus mode (shrink board until hold)</label>
+          <label class="toggle"><input type="checkbox" id="set-home-ghost" checked> Home-row finger ghost</label>
+          <label class="toggle"><input type="checkbox" id="set-board-collapsed"> Collapse board by default</label>
+          <label class="toggle"><input type="checkbox" id="set-reduced-auto" checked> Auto-expand board on layer targets</label>
+        </div>
+        <div class="settings-actions">
+          <button type="button" id="btn-sound" aria-pressed="true">Sound: on</button>
+          <button type="button" id="btn-export">Export progress</button>
+          <button type="button" id="btn-import">Import progress</button>
+          <input type="file" id="import-file" accept="application/json,.json" class="hidden" />
+          <button type="button" id="btn-custom-list">Custom word lists</button>
+          <button type="button" id="btn-reset">Reset this board’s progress</button>
+        </div>
+        <p class="reset-note">Progress is stored only in this browser. Export before reset if you want a backup.</p>
+      </details>
+
       <p class="legend-key" aria-hidden="true">
-        <span class="swatch target"></span> target key
-        <span class="swatch hold"></span> hold Fn (layer)
+        <span class="swatch target"></span> target
+        <span class="swatch hold"></span> hold Fn
         <span class="swatch shift"></span> shift
       </p>
-      <p class="menu-help legend-note">Diagram always shows base keycaps — layer glyphs appear only on the green target key.</p>
+      <p id="rotate-hint" class="rotate-hint hidden">Tip: rotate to landscape for a side-by-side split view.</p>
     </section>
 
+    <!-- ========== GAME ========== -->
     <section id="screen-game" class="screen hidden" aria-label="Typing stage" aria-hidden="true">
       <header id="game-header">
         <button type="button" id="btn-quit">&larr; Menu</button>
@@ -48,12 +108,19 @@
         <span id="game-board-label" class="game-board-label"></span>
         <div id="live-stats" aria-live="off">
           <span id="live-wpm">0 wpm</span>
-          <span id="live-acc">100%</span>
+          <span id="live-acc" class="acc-good">100%</span>
+          <span id="live-goal" class="hidden"></span>
           <span id="live-progress"></span>
         </div>
+        <button type="button" id="btn-toggle-board" class="btn-icon" title="Toggle keyboard diagram" aria-pressed="false">⌨</button>
       </header>
-      <!-- Focus lands here during a run so Space is typed, not used to activate Menu/buttons. -->
+      <div id="prompt-progress" class="prompt-progress" aria-hidden="true"><div id="prompt-progress-bar"></div></div>
       <div id="prompt" role="textbox" aria-readonly="true" tabindex="0"></div>
+      <p id="context-tip" class="context-tip"></p>
+      <div id="hold-meter" class="hold-meter hidden" aria-hidden="true">
+        <span class="hold-meter-label">hold</span>
+        <div class="hold-meter-track"><div id="hold-meter-fill"></div></div>
+      </div>
       <div id="keyboard"></div>
       <p id="layer-hint"></p>
       <p id="coach-tip" class="coach-tip"></p>
@@ -68,17 +135,73 @@
       </div>
     </section>
 
+    <!-- ========== SANDBOX ========== -->
+    <section id="screen-sandbox" class="screen hidden" aria-label="Sandbox" aria-hidden="true">
+      <header id="game-header">
+        <button type="button" id="btn-sandbox-back">&larr; Menu</button>
+        <h2>Sandbox</h2>
+        <span class="game-board-label" id="sandbox-board-label"></span>
+      </header>
+      <p class="menu-help">Type anything — the diagram follows. Paste a string to train it. No fail state.</p>
+      <label class="sandbox-label" for="sandbox-paste">Paste text to practice</label>
+      <textarea id="sandbox-paste" rows="2" placeholder="paste email, code, address…"></textarea>
+      <div class="sandbox-actions">
+        <button type="button" id="btn-sandbox-load">Load paste</button>
+        <button type="button" id="btn-sandbox-clear">Clear</button>
+      </div>
+      <div id="sandbox-prompt" class="sandbox-prompt" role="textbox" tabindex="0"></div>
+      <p id="sandbox-tip" class="context-tip"></p>
+      <div id="sandbox-keyboard"></div>
+    </section>
+
+    <!-- ========== RESULTS ========== -->
     <section id="screen-results" class="screen hidden" aria-label="Stage results" aria-hidden="true">
       <h2 id="results-title"></h2>
       <div id="results-stats"></div>
+      <div id="results-delta" class="results-delta"></div>
       <div id="results-note"></div>
+      <p id="results-coach" class="results-coach"></p>
+      <div id="results-spark" class="results-spark"></div>
       <div id="results-mistakes"></div>
+      <label class="note-label" for="stage-note">Notes for this stage</label>
+      <textarea id="stage-note" rows="2" placeholder="e.g. thumb was floating…"></textarea>
+      <div class="goal-row">
+        <label for="wpm-goal">WPM goal</label>
+        <input type="number" id="wpm-goal" min="0" max="200" step="1" placeholder="e.g. 40" />
+        <button type="button" id="btn-save-goal">Save goal</button>
+      </div>
       <div id="results-actions">
+        <button type="button" id="btn-drill-misses">Drill these misses</button>
         <button type="button" id="btn-retry">Retry</button>
-        <button type="button" id="btn-next" class="hidden">Next stage &rarr;</button>
+        <button type="button" id="btn-next" class="hidden">Next stage →</button>
         <button type="button" id="btn-menu">Menu</button>
       </div>
     </section>
+
+    <!-- ========== CUSTOM LISTS MODAL ========== -->
+    <div id="modal-lists" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lists-title">
+      <div class="modal-card">
+        <h2 id="lists-title">Custom word lists</h2>
+        <p class="menu-help">One item per line. Saved on this board only.</p>
+        <input type="text" id="list-name" placeholder="List name" />
+        <textarea id="list-items" rows="6" placeholder="hello&#10;world&#10;joe@example.com"></textarea>
+        <div class="modal-actions">
+          <button type="button" id="btn-list-save">Save list</button>
+          <button type="button" id="btn-list-close">Close</button>
+        </div>
+        <ul id="list-saved" class="list-saved"></ul>
+      </div>
+    </div>
+
+    <!-- ========== CHEAT SHEET MODAL ========== -->
+    <div id="modal-cheat" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cheat-title">
+      <div class="modal-card modal-wide">
+        <h2 id="cheat-title">Layer map</h2>
+        <p class="menu-help" id="cheat-board-name"></p>
+        <div id="cheat-layers" class="cheat-layers"></div>
+        <button type="button" id="btn-cheat-close">Close</button>
+      </div>
+    </div>
   </main>
   <script type="module" src="js/main.js"></script>
   <script>

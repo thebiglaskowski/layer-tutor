@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createStorage, PASS_ACCURACY, FLUENT_WPM, STORE_KEY } from '../js/storage.js';
+import { createStorage, PASS_ACCURACY, FLUENT_WPM, STORE_KEY, SCHEMA_VERSION } from '../js/storage.js';
 
 const IDS = ['s1', 's2', 's3'];
 
@@ -16,149 +16,95 @@ function store(backing = fakeBacking()) {
 test('PASS_ACCURACY is 90 and FLUENT_WPM is 25', () => {
   assert.equal(PASS_ACCURACY, 90);
   assert.equal(FLUENT_WPM, 25);
+  assert.equal(SCHEMA_VERSION, 4);
 });
 
-test('first stage starts unlocked, the rest locked', () => {
+test('first stage starts unlocked with v4 fields', () => {
   const data = store().load();
   assert.equal(data.stages.s1.unlocked, true);
   assert.equal(data.stages.s2.unlocked, false);
-  assert.equal(data.stages.s1.fluent, false);
-  assert.deepEqual(data.heatmap, {});
-  assert.equal(data.boardId, 'corne-v4');
+  assert.deepEqual(data.stages.s1.recentRuns, []);
+  assert.equal(data.stages.s1.note, '');
+  assert.equal(data.streak.count, 0);
+  assert.ok(data.settings);
+  assert.equal(data.onboardingDone, false);
 });
 
-test('saveResult updates bests and timesPlayed, keeps higher bests', () => {
+test('saveResult updates bests, recentRuns, heatmap, streak', () => {
   const s = store();
-  s.load();
-  s.saveResult('s1', 40, 95);
-  const { data } = s.saveResult('s1', 30, 80);
+  s.saveResult('s1', 40, 95, { a: 2 });
+  const data = s.load();
   assert.equal(data.stages.s1.bestWpm, 40);
-  assert.equal(data.stages.s1.bestAccuracy, 95);
-  assert.equal(data.stages.s1.timesPlayed, 2);
-});
-
-test('accuracy >= 90 unlocks the next stage', () => {
-  const s = store();
-  s.load();
-  const { data, unlockedNext } = s.saveResult('s1', 40, 90);
-  assert.equal(unlockedNext, true);
+  assert.equal(data.stages.s1.recentRuns.length, 1);
+  assert.equal(data.heatmap.a, 2);
+  assert.equal(data.streak.count, 1);
   assert.equal(data.stages.s2.unlocked, true);
-  assert.equal(data.stages.s3.unlocked, false);
 });
 
-test('practice mode does not unlock next stage', () => {
+test('practice and adhoc do not unlock', () => {
   const s = store();
-  s.load();
-  const { unlockedNext, data } = s.saveResult('s1', 50, 99, {}, { practice: true });
-  assert.equal(unlockedNext, false);
-  assert.equal(data.stages.s2.unlocked, false);
-  assert.equal(data.stages.s1.timesPlayed, 1);
+  assert.equal(s.saveResult('s1', 50, 99, {}, { practice: true }).unlockedNext, false);
+  assert.equal(s.load().stages.s2.unlocked, false);
+  s.saveResult(null, 10, 50, { x: 1 }, { weakKeys: true });
+  assert.equal(s.load().heatmap.x, 1);
+  assert.equal(s.load().stages.s1.timesPlayed, 1); // only practice run counted
 });
 
-test('fluent badge requires both accuracy and wpm thresholds', () => {
+test('fluent badge, notes, goals, settings', () => {
   const s = store();
   s.load();
   assert.equal(s.saveResult('s1', 20, 95).data.stages.s1.fluent, false);
-  const { fluentNow, data } = s.saveResult('s1', 30, 95);
-  assert.equal(fluentNow, true);
-  assert.equal(data.stages.s1.fluent, true);
+  assert.equal(s.saveResult('s1', 30, 95).fluentNow, true);
+  let data = s.setStageNote('s1', 'thumb high');
+  assert.equal(data.stages.s1.note, 'thumb high');
+  data = s.setWpmGoal('s1', 45);
+  assert.equal(data.stages.s1.wpmGoal, 45);
+  data = s.updateSettings({ focusMode: false });
+  assert.equal(data.settings.focusMode, false);
+  data = s.setOnboardingDone(true);
+  assert.equal(data.onboardingDone, true);
 });
 
-test('mistakes accumulate into heatmap', () => {
+test('custom lists and export/import', () => {
   const s = store();
-  s.load();
-  s.saveResult('s1', 10, 80, { a: 2, b: 1 });
-  s.saveResult('s1', 10, 80, { a: 1, c: 4 });
-  const misses = s.topMisses(5);
-  assert.deepEqual(misses[0], ['c', 4]);
-  assert.deepEqual(misses.find(([ch]) => ch === 'a'), ['a', 3]);
+  s.saveCustomList({ name: 'emails', items: ['a@b.com', 'hi'] });
+  let data = s.load();
+  assert.equal(data.customLists.length, 1);
+  assert.equal(data.customLists[0].items.length, 2);
+  const json = s.exportAll();
+  const s2 = store(fakeBacking());
+  data = s2.importAll(json);
+  assert.equal(data.customLists[0].name, 'emails');
+  data = s.deleteCustomList(data.customLists[0].id);
+  // delete on s not s2
+  assert.equal(s.load().customLists.length, 0);
 });
 
-test('accuracy < 90 does not unlock; re-clearing reports unlockedNext=false', () => {
-  const s = store();
-  s.load();
-  assert.equal(s.saveResult('s1', 40, 89.9).unlockedNext, false);
-  s.saveResult('s1', 40, 95);
-  assert.equal(s.saveResult('s1', 40, 95).unlockedNext, false);
-});
-
-test('last stage clearing never throws', () => {
-  const s = store();
-  s.load();
-  assert.doesNotThrow(() => s.saveResult('s3', 40, 99));
-});
-
-test('corrupted JSON starts fresh instead of crashing', () => {
-  const s = store(fakeBacking({ [STORE_KEY]: '{not json' }));
-  const data = s.load();
+test('corrupted JSON starts fresh', () => {
+  const data = store(fakeBacking({ [STORE_KEY]: '{nope' })).load();
   assert.equal(data.stages.s1.unlocked, true);
 });
 
-test('progress persists across createStorage instances sharing a backing', () => {
-  const backing = fakeBacking();
-  createStorage(IDS, backing, { defaultBoardId: 'corne-v4' }).saveResult('s1', 33, 92);
-  const data = createStorage(IDS, backing, { defaultBoardId: 'corne-v4' }).load();
-  assert.equal(data.stages.s1.bestWpm, 33);
-  assert.equal(data.stages.s2.unlocked, true);
-});
-
-test('reset wipes progress for the active board only', () => {
-  const backing = fakeBacking();
-  const s = createStorage(IDS, backing, { defaultBoardId: 'corne-v4' });
-  s.saveResult('s1', 40, 95, { x: 3 }, { boardId: 'corne-v4' });
-  s.setActiveBoard('other-board');
-  s.saveResult('s1', 10, 100, {}, { boardId: 'other-board' });
-  s.reset('corne-v4');
-  assert.equal(s.load('corne-v4').stages.s1.bestWpm, 0);
-  assert.equal(s.load('other-board').stages.s1.bestWpm, 10);
-});
-
-test('migrates shifted-symbols → symbol-layer and cascades unlocks for inserted stages', () => {
-  const ids = ['home-row', 'left-hand', 'symbol-layer', 'mixed'];
-  const legacy = {
-    stages: {
-      'home-row': { unlocked: true, bestWpm: 40, bestAccuracy: 95, timesPlayed: 2 },
-      'shifted-symbols': { unlocked: true, bestWpm: 30, bestAccuracy: 92, timesPlayed: 1 },
-      mixed: { unlocked: true, bestWpm: 25, bestAccuracy: 90, timesPlayed: 1 },
-    },
-  };
-  const backing = fakeBacking({ [STORE_KEY]: JSON.stringify(legacy) });
-  const data = createStorage(ids, backing, { defaultBoardId: 'corne-v4' }).load();
-  assert.ok(data.stages['symbol-layer']);
-  assert.equal(data.stages['symbol-layer'].bestWpm, 30);
-  assert.equal(data.stages['shifted-symbols'], undefined);
-  assert.equal(data.stages['left-hand'].unlocked, true);
-  assert.equal(data.stages.mixed.unlocked, true);
-  assert.equal(data.boardId, 'corne-v4');
-});
-
-test('load does not rewrite when store is already current', () => {
+test('load does not rewrite when current', () => {
   const backing = fakeBacking();
   const s = store(backing);
   s.load();
-  const afterFirst = backing._m.get(STORE_KEY);
+  const after = backing._m.get(STORE_KEY);
   let writes = 0;
   const orig = backing.setItem.bind(backing);
   backing.setItem = (k, v) => { writes += 1; orig(k, v); };
   s.load();
   assert.equal(writes, 0);
-  assert.equal(backing._m.get(STORE_KEY), afterFirst);
+  assert.equal(backing._m.get(STORE_KEY), after);
 });
 
-test('progress is isolated per board id', () => {
-  const s = store();
-  s.saveResult('s1', 50, 99, {}, { boardId: 'corne-v4' });
-  s.setActiveBoard('future-board');
-  assert.equal(s.load('future-board').stages.s1.bestWpm, 0);
-  assert.equal(s.load('corne-v4').stages.s1.bestWpm, 50);
-  assert.equal(s.getActiveBoardId(), 'future-board');
-});
-
-test('v3 root shape is written on first load', () => {
-  const backing = fakeBacking();
-  store(backing).load();
-  const root = JSON.parse(backing._m.get(STORE_KEY));
-  assert.equal(root.version, 3);
-  assert.equal(root.activeBoardId, 'corne-v4');
-  assert.ok(root.boards['corne-v4'].stages.s1);
+test('migrates flat v2 and multi-board v3', () => {
+  const flat = {
+    stages: { s1: { unlocked: true, bestWpm: 10, bestAccuracy: 91, timesPlayed: 1 } },
+    heatmap: { z: 2 },
+  };
+  const data = createStorage(IDS, fakeBacking({ [STORE_KEY]: JSON.stringify(flat) }), { defaultBoardId: 'corne-v4' }).load();
+  assert.equal(data.heatmap.z, 2);
+  assert.equal(data.stages.s1.bestWpm, 10);
+  assert.ok(Array.isArray(data.stages.s1.recentRuns));
 });

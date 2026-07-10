@@ -69,3 +69,10 @@ test('stats with no keystrokes at all stay 100 accuracy', () => {
   const g = createGame(['ab']);
   assert.deepEqual(stats(g, 5000), { wpm: 0, accuracy: 100 });
 });
+
+test('progressCounts tracks cursor across items', async () => {
+  const { progressCounts } = await import('../js/gameEngine.js');
+  const g = createGame(['ab', 'cd']);
+  handleKey(g, 'a', 0);
+  assert.deepEqual(progressCounts(g), { done: 1, total: 4, frac: 0.25 });
+});
