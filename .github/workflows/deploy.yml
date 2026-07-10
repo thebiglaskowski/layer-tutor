@@ -1,0 +1,75 @@
+# Tests on every push/PR; deploys to Cloudflare Pages on push to main.
+# Requires repository secrets:
+#   CLOUDFLARE_API_TOKEN   — API token with Account → Cloudflare Pages → Edit
+#   CLOUDFLARE_ACCOUNT_ID  — from `npx wrangler whoami`
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Unit tests
+        working-directory: typing-tutor
+        run: node --test tests/*.test.js
+      - name: Layout sync check
+        run: node scripts/check-layout.mjs
+
+  deploy:
+    # Production deploys only from main (push or manual re-run).
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Require Cloudflare secrets
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          missing=0
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::CLOUDFLARE_API_TOKEN is not set. Create a token (Account → Cloudflare Pages → Edit) and run: gh secret set CLOUDFLARE_API_TOKEN"
+            missing=1
+          fi
+          if [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID is not set. Run: npx wrangler whoami && gh secret set CLOUDFLARE_ACCOUNT_ID"
+            missing=1
+          fi
+          exit "$missing"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Stage runtime assets
+        run: bash scripts/stage-pages.sh
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy .pages-out --project-name layer-tutor --branch main
+          # Pin major; action installs wrangler
+          packageManager: npm
+
+      - name: Production URL
+        run: echo "Live at https://layer-tutor.pages.dev"

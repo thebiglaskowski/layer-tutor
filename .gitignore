@@ -64,3 +64,6 @@ __pycache__/
 *.tmp
 *.orig
 .cache/
+
+# Cloudflare Pages staging output
+.pages-out/

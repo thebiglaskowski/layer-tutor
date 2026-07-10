@@ -51,13 +51,20 @@ node ../scripts/check-layout.mjs
 
 ## Deploy
 
+**Auto-deploy:** push to `main` → tests → Cloudflare Pages
+(https://layer-tutor.pages.dev) via `.github/workflows/deploy.yml`.
+
+One-time secrets (Cloudflare API token with **Account → Cloudflare Pages → Edit**):
+
 ```sh
-bash scripts/deploy-pages.sh
-# or: cd typing-tutor && npm run deploy
+bash scripts/setup-github-deploy.sh
 ```
 
-CI runs unit tests + layout check on every push; deploys to Cloudflare Pages on
-`main` when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` secrets are set.
+Manual deploy (local wrangler login):
+
+```sh
+bash scripts/deploy-pages.sh
+```
 
 ## Adding another keyboard
 
