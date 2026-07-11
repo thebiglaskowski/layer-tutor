@@ -14,6 +14,7 @@ import { createStorage } from './storage.js';
 import { renderKeyboard, renderHeatmapBoard } from './keyboardRenderer.js';
 import * as sound from './sound.js';
 import * as ui from './ui.js';
+import { initEffects, signalFromKey, shortCircuitAtKey } from './canvasEffects.js';
 
 const storage = createStorage(STAGES.map((s) => s.id), globalThis.localStorage, {
   defaultBoardId: DEFAULT_BOARD_ID,
@@ -341,6 +342,8 @@ function sandboxType(ch) {
   if (sandboxLoad) {
     const target = sandboxLoad[sandboxCursor];
     if (ch === target) {
+      const hitTarget = activeBoard.charToKey(ch);
+      if (hitTarget) signalFromKey(sandboxKb?.getKeyRect(hitTarget.keyId), hitTarget.layer);
       sandboxCursor += 1;
       renderSandboxPrompt();
       sound.playCorrect();
@@ -351,6 +354,8 @@ function sandboxType(ch) {
     } else {
       sound.playError();
       sandboxKb?.flashWrong(ch, (c) => activeBoard.charToKey(c));
+      const wrongTarget = activeBoard.charToKey(ch);
+      if (wrongTarget) shortCircuitAtKey(sandboxKb?.getKeyRect(wrongTarget.keyId));
     }
     const nextCh = sandboxLoad ? sandboxLoad[sandboxCursor] : ch;
     const t = activeBoard.charToKey(nextCh);
@@ -368,6 +373,7 @@ function sandboxType(ch) {
   prompt.textContent += ch === ' ' ? '·' : ch;
   if (prompt.textContent.length > 80) prompt.textContent = prompt.textContent.slice(-60);
   const t = activeBoard.charToKey(ch);
+  if (t) signalFromKey(sandboxKb?.getKeyRect(t.keyId), t.layer);
   sandboxKb?.highlightTarget(t, { fullLayerMap: settings().fullLayerMap !== false });
   const tip = document.getElementById('sandbox-tip');
   if (tip) tip.textContent = contextualTip(ch, (c) => activeBoard.charToKey(c), '');
@@ -477,14 +483,18 @@ document.addEventListener('keydown', (e) => {
   e.stopPropagation();
   ui.focusTypingSurface();
 
+  const typedTarget = activeBoard.charToKey(ch);
   const result = handleKey(game, ch, now());
   if (result === 'error') {
     sound.playError();
     ui.flashError();
     kb?.flashWrong(ch, (c) => activeBoard.charToKey(c));
+    const wrongTarget = activeBoard.charToKey(ch);
+    if (wrongTarget) shortCircuitAtKey(kb?.getKeyRect(wrongTarget.keyId));
     ui.renderLiveStats(stats(game, now()), `${game.itemIndex + 1}/${game.items.length}`, stage?._wpmGoal || 0);
     return;
   }
+  if (typedTarget) signalFromKey(kb?.getKeyRect(typedTarget.keyId), typedTarget.layer);
   if (result === 'done') {
     finishStage();
     return;
@@ -692,5 +702,7 @@ resetBtn?.addEventListener('click', () => {
 if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
   document.documentElement.classList.add('reduce-motion');
 }
+
+initEffects();
 
 goMenu();

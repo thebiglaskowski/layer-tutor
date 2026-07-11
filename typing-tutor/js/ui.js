@@ -2,6 +2,7 @@
 
 import { STAGES, TRACK_META, FLUENT_WPM, PASS_ACCURACY, todaysFocus } from './lessons.js';
 import { boardFullLabel, boardLabel } from './boards/index.js';
+import { setAmbientForScreen } from './canvasEffects.js';
 
 const SCREENS = [
   'screen-menu', 'screen-game', 'screen-results',
@@ -18,6 +19,7 @@ export function showScreen(id) {
     el.classList.toggle('hidden', !on);
     el.setAttribute('aria-hidden', on ? 'false' : 'true');
   }
+  setAmbientForScreen(id);
   requestAnimationFrame(() => {
     if (id === 'screen-menu') {
       document.querySelector('.stage-card:not(.locked)')?.focus();

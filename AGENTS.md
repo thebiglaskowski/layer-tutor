@@ -17,6 +17,7 @@ typing-tutor/              # PWA (what Pages deploys)
     lessons.js + lessonPools.js
     storage.js             # multi-board progress / heatmap (localStorage only)
     keyboardRenderer.js    # geometry-driven diagram (DOM)
+    canvasEffects.js       # "Signal Trace" ambient + reactive canvas effects (DOM/canvas)
     ui.js, main.js, sound.js
   tests/                   # node:test unit tests
   icons/
@@ -35,11 +36,12 @@ Ignore agent scratch: `docs/superpowers/`, `.superpowers/`, local `CLAUDE.md`.
 
 - **No build step, no framework, no npm deps.** `package.json` is only `"type": "module"` + scripts.
 - **Module boundaries**
-  - DOM: `keyboardRenderer.js`, `ui.js`, `main.js` only
+  - DOM: `keyboardRenderer.js`, `canvasEffects.js`, `ui.js`, `main.js` only
   - `localStorage`: `storage.js` only
   - Pure / unit-tested: `gameEngine.js`, `lessons.js`, `boards/*`, `storage.js` (injectable backing store)
-- **Boards** live under `js/boards/`. Register in `boards/index.js`. Progress is **per board id** (storage schema v3).
-- **Diagram always shows base keycaps.** Layer glyphs overlay **only** on the green target key; amber = hold Fn, purple = shift. Do not call a full-board `setDisplayLayer(1|2)` for teaching — it makes the map feel wrong.
+- **Boards** live under `js/boards/`. Register in `boards/index.js`. Progress is **per board id** (storage schema v4).
+- **Diagram always shows base keycaps.** Layer glyphs overlay **only** on the green target key; amber = hold Fn, magenta = shift. Do not call a full-board `setDisplayLayer(1|2)` for teaching — it makes the map feel wrong.
+- **Signal Trace canvas effects** (`canvasEffects.js`): ambient circuit-trace background + a reactive pulse from the just-typed key toward its half's controller point, colored by layer, red short-circuit crackle on misses. Always gate animation on the `reduce-motion` root class and `document.hidden`; never block the keydown handler.
 - **Input:** prefer `e.key` (post-QMK character). Special-case Space + arrows only. During a stage, focus the prompt (not Menu) so Space types instead of activating buttons.
 - **Unlock:** ≥90% accuracy. **Fluent:** ≥90% and ≥25 WPM. Practice mode = longer rounds, no unlock side-effects.
 - **Service worker:** bump `CACHE` in `sw.js` when shipping JS/CSS/HTML changes so clients drop the old bucket.
@@ -98,4 +100,4 @@ Right-half rows in `.vil` are **outer → inner**; tutor tables are **visual lef
 
 - Primary board product string: `CORNE V4 Wired Split Mechanical Keyboard, 40% 3×6 ortholinear`
 - Left thumb Fn → layer 1 (numbers + hjkl arrows); right thumb Fn → layer 2 (symbols)
-- Storage key name `qmk-typing-tutor-v1` is historical; document version is **3** (multi-board)
+- Storage key name `qmk-typing-tutor-v1` is historical; document version is **4** (multi-board)

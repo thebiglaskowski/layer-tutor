@@ -108,7 +108,7 @@ function caseSvg(half) {
 
 function leftGlow(col) {
   const hue = 175 + ((220 - 175) * col) / 6;
-  return `hsl(${hue.toFixed(0)} 85% 58% / 0.5)`;
+  return `hsl(${hue.toFixed(0)} 100% 55% / 0.6)`;
 }
 
 function rightGlow(col) {
@@ -117,7 +117,7 @@ function rightGlow(col) {
   const i = Math.min(stops.length - 2, Math.floor(t));
   const frac = t - i;
   const hue = (stops[i] + (stops[i + 1] - stops[i]) * frac) % 360;
-  return `hsl(${hue.toFixed(0)} 85% 58% / 0.5)`;
+  return `hsl(${hue.toFixed(0)} 100% 55% / 0.6)`;
 }
 
 function glowFor(key, geom) {
@@ -339,6 +339,14 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
     }
   }
 
+  /** Viewport rect of a key element, plus its half's rect, for canvas overlay effects. */
+  function getKeyRect(keyId) {
+    const el = keyEls.get(keyId);
+    if (!el) return null;
+    const halfEl = el.closest('.kb-half');
+    return { rect: el.getBoundingClientRect(), halfRect: halfEl?.getBoundingClientRect() ?? null };
+  }
+
   return {
     highlightTarget,
     setHomeGhost,
@@ -347,6 +355,7 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
     flashWrong,
     paintHeatmap,
     paintBaseLegends,
+    getKeyRect,
     destroy() {
       clearHighlights();
       keyEls.clear();
