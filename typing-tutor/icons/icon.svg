@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- Layer Tutor mark: the exploded keystack — one key, three layers, one signal.
+       Static render of the header logo; colors match the tutor legend
+       (cyan = base, amber = hold Fn, magenta = shift). -->
+  <rect width="96" height="96" rx="20" fill="#05060c"/>
+  <line x1="48" y1="6" x2="48" y2="90" stroke="#00e5ff" stroke-width="2" stroke-dasharray="2 5" opacity="0.3"/>
+  <g fill="none" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round">
+    <g stroke="#d400ff">
+      <path d="M22 69 L48 56 L74 69 L48 82 Z" fill="rgba(212,0,255,0.08)"/>
+      <path d="M22 69 V74 L48 87 L74 74 V69" opacity="0.45"/>
+    </g>
+    <g stroke="#ffb200">
+      <path d="M22 45 L48 32 L74 45 L48 58 Z" fill="rgba(255,178,0,0.08)"/>
+      <path d="M22 45 V50 L48 63 L74 50 V45" opacity="0.45"/>
+    </g>
+    <g stroke="#00e5ff">
+      <path d="M22 21 L48 8 L74 21 L48 34 Z" fill="rgba(0,229,255,0.1)"/>
+      <path d="M22 21 V26 L48 39 L74 26 V21" opacity="0.45"/>
+    </g>
+  </g>
+  <circle cx="48" cy="14.5" r="3.5" fill="#eafcff"/>
+</svg>

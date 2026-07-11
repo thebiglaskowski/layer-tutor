@@ -63,20 +63,81 @@ body {
   outline-offset: 3px;
 }
 
-/* ---------- menu ---------- */
-h1 {
+/* ---------- logo lockup ---------- */
+/* Mark = the exploded keystack: one key, three layers (base/Fn/shift),
+   one signal passing through — same color legend the tutor teaches with. */
+h1.logo {
+  display: flex;
+  align-items: center;
+  gap: 1.05rem;
   font-family: var(--mono);
-  font-size: 2.6rem; font-weight: 800; letter-spacing: -0.01em;
+  line-height: 1;
+}
+.logo-mark { width: 3.1rem; height: auto; flex: none; overflow: visible; }
+.logo-mark path {
+  fill: none;
+  stroke-width: 4;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.logo-mark .plate-side { opacity: 0.45; }
+.logo-plate { transition: transform 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.35); }
+.logo-plate--base { filter: drop-shadow(0 0 5px rgba(0, 229, 255, 0.6)); }
+.logo-plate--base path { stroke: var(--accent); }
+.logo-plate--base .plate-top { fill: rgba(0, 229, 255, 0.08); }
+.logo-plate--fn { filter: drop-shadow(0 0 5px rgba(255, 178, 0, 0.45)); }
+.logo-plate--fn path { stroke: var(--hold); }
+.logo-plate--fn .plate-top { fill: rgba(255, 178, 0, 0.06); }
+.logo-plate--shift { filter: drop-shadow(0 0 5px rgba(212, 0, 255, 0.45)); }
+.logo-plate--shift path { stroke: var(--shift); }
+.logo-plate--shift .plate-top { fill: rgba(212, 0, 255, 0.06); }
+.logo:hover .logo-plate--base { transform: translateY(-4px); }
+.logo:hover .logo-plate--shift { transform: translateY(4px); }
+.logo-trace {
+  stroke: var(--accent);
+  stroke-width: 2;
+  stroke-dasharray: 2 5;
+  opacity: 0.3;
+}
+.logo-pulse {
+  fill: #eafcff;
+  filter: drop-shadow(0 0 4px var(--accent));
+  opacity: 0;
+  animation: logoPulse 4.6s cubic-bezier(0.55, 0, 0.45, 1) infinite;
+}
+@keyframes logoPulse {
+  0% { transform: translateY(-4px); opacity: 0; }
+  6% { opacity: 1; }
+  30% { opacity: 1; }
+  36% { transform: translateY(92px); opacity: 0; }
+  100% { transform: translateY(92px); opacity: 0; }
+}
+.logo-word {
+  display: flex;
+  flex-direction: column;
+  gap: 0.32rem;
+  text-transform: uppercase;
+}
+/* LAYER and TUTOR are both 5 chars — in a monospace face the tracking below
+   justifies them to the same width (advance ≈ 0.64 × main size per char). */
+.logo-word-main {
+  font-size: 2.2rem; font-weight: 800; letter-spacing: 0.04em;
   background: linear-gradient(100deg, var(--accent) 0%, var(--shift) 65%, var(--accent) 100%);
   background-size: 220% auto;
   -webkit-background-clip: text; background-clip: text; color: transparent;
   filter: drop-shadow(0 0 20px rgba(0, 229, 255, 0.3));
   animation: signalDrift 7s ease-in-out infinite;
 }
+.logo-word-sub {
+  font-size: 0.95rem; font-weight: 600; letter-spacing: 0.94em;
+  color: var(--text-dim);
+}
 @keyframes signalDrift {
   0%, 100% { background-position: 0% center; }
   50% { background-position: 100% center; }
 }
+
+/* ---------- menu ---------- */
 .subtitle { color: var(--text-dim); margin: 0.4rem 0 0.6rem; }
 .menu-help { color: var(--text-dim); font-size: 0.85rem; margin-bottom: 1.6rem; opacity: 0.9; }
 
@@ -549,7 +610,9 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 229, 25
 @media (max-width: 760px) {
   html { font-size: 12px; }
   #app { width: 94vw; padding: 1.4rem 0 2.5rem; }
-  h1 { font-size: 2.2rem; }
+  .logo-mark { width: 2.5rem; }
+  .logo-word-main { font-size: 1.8rem; }
+  .logo-word-sub { font-size: 0.8rem; letter-spacing: 0.84em; }
   #keyboard, #sandbox-keyboard { flex-direction: column; align-items: center; gap: 2rem; }
   .kb-half-L { transform: rotate(-1.5deg); }
   .kb-half-R { transform: rotate(1.5deg); }
