@@ -1,13 +1,14 @@
 // "Signal Trace" canvas effects: the app's one visual signature.
 //
 // Layer Tutor teaches that a keystroke is a signal traveling a keyboard
-// matrix to the controller. This module makes that literal:
-//  - an ambient canvas draws a sparse, slow-pulsing circuit-trace field
-//    behind the whole app (bright on idle screens, dimmed during typing
-//    so it never competes with focus)
-//  - a reactive overlay canvas fires a signal pulse from the key just
-//    typed toward its half's controller point, colored by the active
-//    layer; wrong keys get a red short-circuit crackle instead
+// matrix to the controller. This module makes that literal — but motion is
+// confined to moments and places where it can't compete with typing focus:
+//  - idle screens (menu/results) get a slow, animated circuit-trace field
+//  - the game screen gets the same field frozen static and faint; nothing
+//    in the background moves while the user is typing
+//  - each correct keystroke blooms a small layer-colored glow contained
+//    within the key itself (no cross-screen travel); wrong keys get a
+//    brief red short-circuit crackle
 //
 // DOM/canvas access lives here by design, alongside keyboardRenderer.js
 // and ui.js. Pure state (traces, sparks) is closed over per module since
@@ -24,6 +25,7 @@ let traces = [];
 let sparks = [];
 let rafId = null;
 let lastFrame = 0;
+let staticAmbient = false; // true on the game screen: background frozen
 
 function reducedMotion() {
   return document.documentElement.classList.contains(REDUCE_MOTION_CLASS);
@@ -78,7 +80,7 @@ function generateTraces(w, h) {
       pts,
       hue: pickHue(),
       phase: Math.random(),
-      speed: 0.05 + Math.random() * 0.06,
+      speed: 0.02 + Math.random() * 0.03,
     });
   }
   traces = next;
@@ -109,27 +111,46 @@ function pointAt(pts, t) {
   return pts[pts.length - 1];
 }
 
-function drawAmbient(w, h, dt) {
-  ambientCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ambientCtx.fillStyle = 'rgba(5, 6, 12, 0.22)';
-  ambientCtx.fillRect(0, 0, w, h);
-
+function drawTracePaths(alpha) {
   for (const t of traces) {
-    ambientCtx.strokeStyle = `hsl(${t.hue} 70% 55% / 0.07)`;
+    ambientCtx.strokeStyle = `hsl(${t.hue} 70% 55% / ${alpha})`;
     ambientCtx.lineWidth = 1;
     ambientCtx.beginPath();
     ambientCtx.moveTo(t.pts[0][0], t.pts[0][1]);
     for (let i = 1; i < t.pts.length; i++) ambientCtx.lineTo(t.pts[i][0], t.pts[i][1]);
     ambientCtx.stroke();
+  }
+}
 
+/** One motionless frame: trace paths plus solder-pad dots at their endpoints. */
+function drawAmbientStatic(w, h) {
+  ambientCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ambientCtx.clearRect(0, 0, w, h);
+  drawTracePaths(0.07);
+  for (const t of traces) {
+    const [px, py] = t.pts[t.pts.length - 1];
+    ambientCtx.fillStyle = `hsl(${t.hue} 80% 60% / 0.12)`;
+    ambientCtx.beginPath();
+    ambientCtx.arc(px, py, 2, 0, Math.PI * 2);
+    ambientCtx.fill();
+  }
+}
+
+function drawAmbient(w, h, dt) {
+  ambientCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ambientCtx.fillStyle = 'rgba(5, 6, 12, 0.22)';
+  ambientCtx.fillRect(0, 0, w, h);
+  drawTracePaths(0.07);
+
+  for (const t of traces) {
     t.phase = (t.phase + t.speed * dt) % 1;
     const [px, py] = pointAt(t.pts, t.phase);
-    const grad = ambientCtx.createRadialGradient(px, py, 0, px, py, 10);
-    grad.addColorStop(0, `hsl(${t.hue} 100% 70% / 0.9)`);
+    const grad = ambientCtx.createRadialGradient(px, py, 0, px, py, 8);
+    grad.addColorStop(0, `hsl(${t.hue} 100% 70% / 0.6)`);
     grad.addColorStop(1, `hsl(${t.hue} 100% 60% / 0)`);
     ambientCtx.fillStyle = grad;
     ambientCtx.beginPath();
-    ambientCtx.arc(px, py, 10, 0, Math.PI * 2);
+    ambientCtx.arc(px, py, 8, 0, Math.PI * 2);
     ambientCtx.fill();
   }
 }
@@ -142,27 +163,26 @@ function drawSignal(w, h) {
   sparks = sparks.filter((s) => performance.now() - s.start < s.duration);
   for (const s of sparks) {
     const t = Math.min(1, (performance.now() - s.start) / s.duration);
-    if (s.kind === 'signal') {
+    const fade = 1 - t;
+    if (s.kind === 'bloom') {
+      // soft glow bloom contained within the key: a fading center glow plus
+      // a thin ring expanding to the key's edge
       const eased = 1 - (1 - t) * (1 - t);
-      const x = s.x0 + (s.x1 - s.x0) * eased;
-      const y = s.y0 + (s.y1 - s.y0) * eased - Math.sin(eased * Math.PI) * 18;
-      const fade = 1 - t;
-      signalCtx.strokeStyle = `hsl(${s.hue} 100% 65% / ${0.5 * fade})`;
-      signalCtx.lineWidth = 2;
-      signalCtx.beginPath();
-      signalCtx.moveTo(s.x0, s.y0);
-      signalCtx.quadraticCurveTo(s.x0 + (x - s.x0) * 0.5, s.y0 - 18, x, y);
-      signalCtx.stroke();
-      const grad = signalCtx.createRadialGradient(x, y, 0, x, y, 9);
-      grad.addColorStop(0, `hsl(${s.hue} 100% 75% / ${0.95 * fade})`);
-      grad.addColorStop(1, `hsl(${s.hue} 100% 65% / 0)`);
+      const glowR = s.r * (0.5 + eased * 0.5);
+      const grad = signalCtx.createRadialGradient(s.x, s.y, 0, s.x, s.y, glowR);
+      grad.addColorStop(0, `hsl(${s.hue} 100% 72% / ${0.55 * fade})`);
+      grad.addColorStop(1, `hsl(${s.hue} 100% 60% / 0)`);
       signalCtx.fillStyle = grad;
       signalCtx.beginPath();
-      signalCtx.arc(x, y, 9, 0, Math.PI * 2);
+      signalCtx.arc(s.x, s.y, glowR, 0, Math.PI * 2);
       signalCtx.fill();
+      signalCtx.strokeStyle = `hsl(${s.hue} 100% 70% / ${0.45 * fade})`;
+      signalCtx.lineWidth = 1.5;
+      signalCtx.beginPath();
+      signalCtx.arc(s.x, s.y, s.r * eased, 0, Math.PI * 2);
+      signalCtx.stroke();
     } else {
       // short-circuit crackle: jittery red spikes radiating from the key
-      const fade = 1 - t;
       for (const a of s.angles) {
         const len = s.r * (0.5 + t * 0.5);
         const jx = s.x + Math.cos(a) * len + (Math.random() - 0.5) * 4;
@@ -188,8 +208,13 @@ function tick(now) {
   lastFrame = now;
   const w = window.innerWidth;
   const h = window.innerHeight;
-  drawAmbient(w, h, dt);
+  if (!staticAmbient) drawAmbient(w, h, dt);
   drawSignal(w, h);
+  if (staticAmbient && sparks.length === 0) {
+    // background is frozen and the last spark just cleared — go fully idle
+    rafId = null;
+    return;
+  }
   rafId = requestAnimationFrame(tick);
 }
 
@@ -207,6 +232,7 @@ function handleResize() {
   const { ctx: sctx } = sizeCanvas(signalCanvas);
   signalCtx = sctx;
   generateTraces(w, h);
+  if (staticAmbient || reducedMotion()) drawAmbientStatic(w, h);
 }
 
 /** Mount the two effect canvases. Call once at startup. */
@@ -216,6 +242,8 @@ export function initEffects() {
   if (!ambientCanvas || !signalCanvas) return;
 
   handleResize();
+  // reduced-motion users get the static field instead of a blank canvas
+  if (reducedMotion()) drawAmbientStatic(window.innerWidth, window.innerHeight);
   window.addEventListener('resize', handleResize);
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) ensureLoop();
@@ -228,30 +256,34 @@ export function initEffects() {
 }
 
 /**
- * Dim the ambient field during active typing so it never competes with the
- * prompt, and let it shine on idle/menu/results screens.
+ * Freeze the ambient field into a static faint frame during active typing so
+ * nothing moves behind the prompt; let it animate on idle/menu/results screens.
  */
 export function setAmbientForScreen(screenId) {
   if (!ambientCanvas) return;
-  ambientCanvas.style.opacity = screenId === 'screen-game' ? '0.16' : '0.85';
+  staticAmbient = screenId === 'screen-game';
+  ambientCanvas.style.opacity = staticAmbient ? '0.35' : '0.7';
+  if (staticAmbient) {
+    drawAmbientStatic(window.innerWidth, window.innerHeight);
+  } else {
+    ensureLoop();
+  }
 }
 
 const LAYER_HUE = { 0: 189, 1: 38, 2: 291 };
 
-/** Fire a signal pulse from the just-typed key toward its half's controller point. */
+/** Bloom a layer-colored glow contained within the just-typed key. */
 export function signalFromKey(keyInfo, layer = 0) {
   if (!signalCtx || reducedMotion() || !keyInfo?.rect) return;
-  const { rect, halfRect } = keyInfo;
-  const x0 = rect.left + rect.width / 2;
-  const y0 = rect.top + rect.height / 2;
-  const x1 = halfRect ? halfRect.left + halfRect.width / 2 : x0;
-  const y1 = halfRect ? halfRect.bottom - 8 : y0 + 40;
+  const { rect } = keyInfo;
   sparks.push({
-    kind: 'signal',
-    x0, y0, x1, y1,
+    kind: 'bloom',
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+    r: Math.max(rect.width, rect.height) * 0.75,
     hue: LAYER_HUE[layer] ?? LAYER_HUE[0],
     start: performance.now(),
-    duration: 420,
+    duration: 280,
   });
   ensureLoop();
 }

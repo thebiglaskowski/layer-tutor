@@ -41,7 +41,7 @@ Ignore agent scratch: `docs/superpowers/`, `.superpowers/`, local `CLAUDE.md`.
   - Pure / unit-tested: `gameEngine.js`, `lessons.js`, `boards/*`, `storage.js` (injectable backing store)
 - **Boards** live under `js/boards/`. Register in `boards/index.js`. Progress is **per board id** (storage schema v4).
 - **Diagram always shows base keycaps.** Layer glyphs overlay **only** on the green target key; amber = hold Fn, magenta = shift. Do not call a full-board `setDisplayLayer(1|2)` for teaching — it makes the map feel wrong.
-- **Signal Trace canvas effects** (`canvasEffects.js`): ambient circuit-trace background + a reactive pulse from the just-typed key toward its half's controller point, colored by layer, red short-circuit crackle on misses. Always gate animation on the `reduce-motion` root class and `document.hidden`; never block the keydown handler.
+- **Signal Trace canvas effects** (`canvasEffects.js`): animated circuit-trace background on idle screens only; static faint frame on the game screen (no background motion during typing). Correct keystrokes bloom a layer-colored glow contained within the key; misses get a red short-circuit crackle. Always gate animation on the `reduce-motion` root class and `document.hidden`; never block the keydown handler.
 - **Input:** prefer `e.key` (post-QMK character). Special-case Space + arrows only. During a stage, focus the prompt (not Menu) so Space types instead of activating buttons.
 - **Unlock:** ≥90% accuracy. **Fluent:** ≥90% and ≥25 WPM. Practice mode = longer rounds, no unlock side-effects.
 - **Service worker:** bump `CACHE` in `sw.js` when shipping JS/CSS/HTML changes so clients drop the old bucket.
