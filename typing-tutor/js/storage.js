@@ -10,14 +10,18 @@
 //       stages: { id: { unlocked, bestWpm, bestAccuracy, timesPlayed, fluent,
 //                        recentRuns: [{wpm,accuracy,at}], note, wpmGoal } },
 //       heatmap: { ch: n },
+//       keyMetrics: { ch: { attempts, correct, errors, totalLatencyMs, samples } },
+//       transitionMetrics: { kind: { count, errors, totalLatencyMs } },
+//       sessionRuns: [{ wpm, accuracy, avgLatencyMs, at }],
 //       streak: { lastDate: 'YYYY-MM-DD', count: 0 },
 //       customLists: [{ id, name, items: string[] }],
-//       settings: { focusMode, showHomeGhost, boardCollapsed, reducedBoardAuto, fullLayerMap }
+//       settings: { focusMode, showHomeGhost, boardCollapsed, reducedBoardAuto, soundEnabled }
 //     }
 //   }
 // }
 
 export const STORE_KEY = 'qmk-typing-tutor-v1';
+const LEGACY_SOUND_KEY = 'qmk-typing-tutor-sound';
 export const SCHEMA_VERSION = 4;
 export const PASS_ACCURACY = 90;
 export const FLUENT_WPM = 25;
@@ -48,8 +52,7 @@ function defaultSettings() {
     showHomeGhost: true,
     boardCollapsed: false,
     reducedBoardAuto: true,
-    // When the next char needs a layer, show that layer on every keycap.
-    fullLayerMap: true,
+    soundEnabled: true,
   };
 }
 
@@ -57,6 +60,9 @@ function emptyBoardProgress() {
   return {
     stages: {},
     heatmap: {},
+    keyMetrics: {},
+    transitionMetrics: {},
+    sessionRuns: [],
     streak: { lastDate: '', count: 0 },
     customLists: [],
     settings: defaultSettings(),
@@ -90,14 +96,43 @@ function normalizeStage(prev, unlockedDefault) {
     bestWpm: Number(prev.bestWpm) || 0,
     bestAccuracy: Number(prev.bestAccuracy) || 0,
     timesPlayed: Number(prev.timesPlayed) || 0,
-    fluent: !!prev.fluent || (
-      (Number(prev.bestWpm) || 0) >= FLUENT_WPM
-      && (Number(prev.bestAccuracy) || 0) >= PASS_ACCURACY
+    // A stage is fluent only when one run meets both thresholds. Independent
+    // all-time bests may have come from different runs and cannot be combined.
+    fluent: !!prev.fluent || recent.some(
+      (r) => r.wpm >= FLUENT_WPM && r.accuracy >= PASS_ACCURACY,
     ),
     recentRuns: recent,
     note: typeof prev.note === 'string' ? prev.note.slice(0, 500) : '',
     wpmGoal: Math.max(0, Number(prev.wpmGoal) || 0),
   };
+}
+
+function normalizeMetricMap(raw, transition = false) {
+  const out = {};
+  if (!raw || typeof raw !== 'object') return out;
+  for (const [key, value] of Object.entries(raw)) {
+    if (!value || typeof value !== 'object') continue;
+    if (transition) {
+      const count = Math.max(0, Number(value.count) || 0);
+      if (count) out[key] = {
+        count,
+        errors: Math.max(0, Number(value.errors) || 0),
+        totalLatencyMs: Math.max(0, Number(value.totalLatencyMs) || 0),
+      };
+      continue;
+    }
+    const attempts = Math.max(0, Number(value.attempts) || 0);
+    const correct = Math.max(0, Number(value.correct) || 0);
+    const errors = Math.max(0, Number(value.errors) || 0);
+    const samples = Math.max(0, Number(value.samples) || 0);
+    if (attempts || correct || errors || samples) {
+      out[key] = {
+        attempts, correct, errors, samples,
+        totalLatencyMs: Math.max(0, Number(value.totalLatencyMs) || 0),
+      };
+    }
+  }
+  return out;
 }
 
 /**
@@ -135,6 +170,19 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
           if (typeof n === 'number' && n > 0) out.heatmap[ch] = n;
         }
       }
+      out.keyMetrics = normalizeMetricMap(rawBoard.keyMetrics);
+      out.transitionMetrics = normalizeMetricMap(rawBoard.transitionMetrics, true);
+      if (Array.isArray(rawBoard.sessionRuns)) {
+        out.sessionRuns = rawBoard.sessionRuns
+          .filter((r) => r && typeof r.wpm === 'number' && typeof r.at === 'string')
+          .slice(-20)
+          .map((r) => ({
+            wpm: Math.max(0, Number(r.wpm) || 0),
+            accuracy: Math.max(0, Number(r.accuracy) || 0),
+            avgLatencyMs: Math.max(0, Number(r.avgLatencyMs) || 0),
+            at: r.at,
+          }));
+      }
       if (rawBoard.streak && typeof rawBoard.streak === 'object') {
         out.streak = {
           lastDate: typeof rawBoard.streak.lastDate === 'string' ? rawBoard.streak.lastDate : '',
@@ -151,8 +199,18 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
           }));
       }
       if (rawBoard.settings && typeof rawBoard.settings === 'object') {
-        out.settings = { ...defaultSettings(), ...rawBoard.settings };
+        const defaults = defaultSettings();
+        for (const key of Object.keys(defaults)) {
+          if (typeof rawBoard.settings[key] === 'boolean') defaults[key] = rawBoard.settings[key];
+        }
+        out.settings = defaults;
       }
+    }
+    if (typeof rawBoard?.settings?.soundEnabled !== 'boolean') {
+      try {
+        const legacySound = backing.getItem(LEGACY_SOUND_KEY);
+        if (legacySound != null) out.settings.soundEnabled = legacySound !== '0';
+      } catch { /* unavailable backing */ }
     }
 
     for (let i = 0; i < stageIds.length; i++) {
@@ -223,6 +281,9 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
       onboardingDone: root.onboardingDone,
       stages: bp.stages,
       heatmap: bp.heatmap,
+      keyMetrics: bp.keyMetrics,
+      transitionMetrics: bp.transitionMetrics,
+      sessionRuns: bp.sessionRuns,
       streak: bp.streak,
       customLists: bp.customLists,
       settings: bp.settings,
@@ -279,6 +340,35 @@ export function createStorage(stageIds, backing = globalThis.localStorage, opts 
     for (const [ch, n] of Object.entries(mistakes)) {
       if (typeof n === 'number' && n > 0) bp.heatmap[ch] = (bp.heatmap[ch] ?? 0) + n;
     }
+
+    const runMetrics = opts.metrics || {};
+    for (const [ch, incoming] of Object.entries(runMetrics.keyMetrics || {})) {
+      if (!incoming || typeof incoming !== 'object') continue;
+      const current = bp.keyMetrics[ch] || {
+        attempts: 0, correct: 0, errors: 0, totalLatencyMs: 0, samples: 0,
+      };
+      for (const key of ['attempts', 'correct', 'errors', 'totalLatencyMs', 'samples']) {
+        current[key] += Math.max(0, Number(incoming[key]) || 0);
+      }
+      bp.keyMetrics[ch] = current;
+    }
+    for (const [kind, incoming] of Object.entries(runMetrics.transitionMetrics || {})) {
+      if (!incoming || typeof incoming !== 'object') continue;
+      const current = bp.transitionMetrics[kind] || { count: 0, errors: 0, totalLatencyMs: 0 };
+      current.count += Math.max(0, Number(incoming.count) || 0);
+      current.errors += Math.max(0, Number(incoming.errors) || 0);
+      current.totalLatencyMs += Math.max(0, Number(incoming.totalLatencyMs) || 0);
+      bp.transitionMetrics[kind] = current;
+    }
+    bp.sessionRuns = [
+      ...(bp.sessionRuns || []),
+      {
+        wpm,
+        accuracy,
+        avgLatencyMs: Math.max(0, Number(runMetrics.avgLatencyMs) || 0),
+        at: new Date().toISOString(),
+      },
+    ].slice(-20);
 
     // Ad-hoc runs (weak keys / custom lists): heatmap + streak only.
     if (!stageId || !bp.stages[stageId]) {

@@ -76,3 +76,20 @@ test('progressCounts tracks cursor across items', async () => {
   handleKey(g, 'a', 0);
   assert.deepEqual(progressCounts(g), { done: 1, total: 4, frac: 0.25 });
 });
+
+test('records per-key attempts, response latency, and transition events', () => {
+  const g = createGame(['ab'], 100);
+  handleKey(g, 'x', 150);
+  handleKey(g, 'a', 300);
+  handleKey(g, 'b', 500);
+  assert.deepEqual(g.keyMetrics.a, {
+    attempts: 2, correct: 1, errors: 1, totalLatencyMs: 200, samples: 1,
+  });
+  assert.deepEqual(g.keyMetrics.b, {
+    attempts: 1, correct: 1, errors: 0, totalLatencyMs: 200, samples: 1,
+  });
+  assert.deepEqual(g.events, [
+    { ch: 'a', previousCh: null, latencyMs: 200, errors: 1 },
+    { ch: 'b', previousCh: 'a', latencyMs: 200, errors: 0 },
+  ]);
+});

@@ -60,9 +60,7 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
     boards = [],
     activeBoard = null,
     onBoardChange = null,
-    onWeakKeys = null,
-    onPlayCustom = null,
-    onEditNote = null,
+    onFocus = null,
   } = boardOpts;
 
   const select = document.getElementById('board-select');
@@ -86,7 +84,8 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
   const focusEl = document.getElementById('today-focus');
   if (focusEl) {
     focusEl.hidden = false;
-    focusEl.innerHTML = `<span class="focus-label">Today</span> <span class="focus-text">${esc(focus.title)}</span>`;
+    focusEl.innerHTML = `<button type="button" class="focus-action"><span class="focus-label">Today</span> <span class="focus-text">${esc(focus.title)}</span><span aria-hidden="true">→</span></button>`;
+    focusEl.querySelector('.focus-action')?.addEventListener('click', () => onFocus?.(focus));
   }
   const streakEl = document.getElementById('streak-bar');
   if (streakEl) {
@@ -113,8 +112,6 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
   if (setGhost) setGhost.checked = s.showHomeGhost !== false;
   if (setCollapsed) setCollapsed.checked = !!s.boardCollapsed;
   if (setReduced) setReduced.checked = s.reducedBoardAuto !== false;
-  const setFullMap = document.getElementById('set-full-layer-map');
-  if (setFullMap) setFullMap.checked = s.fullLayerMap !== false;
 
   // Grouped stage list
   const host = document.getElementById('stage-list');
@@ -141,9 +138,10 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
       };
       const globalIndex = STAGES.indexOf(stage);
       const li = document.createElement('li');
-      const card = document.createElement('div');
+      const card = document.createElement(p.unlocked ? 'button' : 'div');
       card.className = 'stage-card' + (p.unlocked ? '' : ' locked');
       card.dataset.stageId = stage.id;
+      if (p.unlocked) card.type = 'button';
 
       let status = 'locked';
       if (p.unlocked && p.fluent) status = 'fluent';
@@ -178,38 +176,43 @@ export function renderMenu(progress, onSelect, topMisses = [], boardOpts = {}) {
           ${sparkSvg ? `<span class="spark-wrap">${sparkSvg}</span>` : ''}
         </span>
         <span class="stage-stats">${p.unlocked ? esc(stats + goal) : '🔒'}</span>
-        ${p.unlocked ? '<button type="button" class="btn-practice" data-action="practice">Practice</button>' : ''}
       `;
 
       if (p.unlocked) {
-        card.tabIndex = 0;
-        card.setAttribute('role', 'button');
         card.setAttribute('aria-label', `Play ${stage.name}`);
-        card.addEventListener('click', (e) => {
-          if (e.target.closest('[data-action="practice"]')) return;
-          onSelect(stage, { practice: false });
-        });
-        card.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onSelect(stage, { practice: false });
-          }
-        });
-        card.querySelector('[data-action="practice"]')?.addEventListener('click', (e) => {
-          e.stopPropagation();
-          onSelect(stage, { practice: true });
-        });
+        card.addEventListener('click', () => onSelect(stage, { practice: false }));
       } else {
         card.setAttribute('aria-disabled', 'true');
       }
 
       li.appendChild(card);
+      if (p.unlocked) {
+        const practiceButton = document.createElement('button');
+        practiceButton.type = 'button';
+        practiceButton.className = 'btn-practice';
+        practiceButton.textContent = 'Practice';
+        practiceButton.setAttribute('aria-label', `Practice ${stage.name}`);
+        practiceButton.addEventListener('click', () => onSelect(stage, { practice: true }));
+        li.appendChild(practiceButton);
+      }
       list.appendChild(li);
     });
 
     section.appendChild(list);
     host.appendChild(section);
   }
+
+  const playable = [...host.querySelectorAll('.stage-card:not(.locked)')];
+  playable.forEach((card, index) => card.addEventListener('keydown', (e) => {
+    let next = null;
+    if (e.key === 'ArrowDown') next = Math.min(playable.length - 1, index + 1);
+    else if (e.key === 'ArrowUp') next = Math.max(0, index - 1);
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = playable.length - 1;
+    if (next == null) return;
+    e.preventDefault();
+    playable[next]?.focus();
+  }));
 
   // Heatmap list
   const heat = document.getElementById('heatmap');
@@ -312,12 +315,19 @@ export function setPaused(paused) {
   if (!overlay) return;
   overlay.classList.toggle('hidden', !paused);
   overlay.setAttribute('aria-hidden', paused ? 'false' : 'true');
+  for (const child of document.getElementById('screen-game')?.children || []) {
+    if (child !== overlay) child.inert = paused;
+  }
+  requestAnimationFrame(() => {
+    if (paused) document.getElementById('btn-resume')?.focus();
+    else document.getElementById('prompt')?.focus({ preventScroll: true });
+  });
 }
 
 export function renderResults(stage, { wpm, accuracy }, mistakes, opts) {
   const {
     passed, hasNext, practice, fluent, fluentNow, boardName,
-    previousBest = null, coach = '', recentRuns = [],
+    previousBest = null, coach = '', recentRuns = [], runAnalysis = null, sessionDelta = null,
   } = opts;
 
   const title = document.getElementById('results-title');
@@ -358,7 +368,23 @@ export function renderResults(stage, { wpm, accuracy }, mistakes, opts) {
   }
 
   const coachEl = document.getElementById('results-coach');
-  if (coachEl) coachEl.textContent = coach || '';
+  if (coachEl) coachEl.textContent = [coach, runAnalysis?.transitionCoach].filter(Boolean).join(' ');
+
+  const analysisEl = document.getElementById('results-analysis');
+  if (analysisEl) {
+    const slow = (runAnalysis?.slowest || []).map((row) =>
+      `<span class="metric-pill"><kbd>${row.ch === ' ' ? '␣' : esc(row.ch)}</kbd> ${Math.round(row.avgLatencyMs)}ms</span>`).join('');
+    const transitions = (runAnalysis?.transitions || []).slice(0, 4).map((row) =>
+      `<span class="metric-pill">${esc(row.kind.replaceAll('-', ' '))} ${row.accuracy}% · ${row.avgLatencyMs}ms</span>`).join('');
+    let session = '';
+    if (sessionDelta) {
+      const w = `${sessionDelta.wpm >= 0 ? '+' : ''}${sessionDelta.wpm} wpm`;
+      const a = `${sessionDelta.accuracy >= 0 ? '+' : ''}${sessionDelta.accuracy}% acc`;
+      const latency = sessionDelta.latencyMs == null ? '' : ` · ${sessionDelta.latencyMs <= 0 ? '' : '+'}${sessionDelta.latencyMs}ms response`;
+      session = `<p class="session-delta">Since this session started: ${esc(w)} · ${esc(a)}${esc(latency)}</p>`;
+    }
+    analysisEl.innerHTML = `${session}${slow ? `<div><strong>Slowest keys</strong>${slow}</div>` : ''}${transitions ? `<div><strong>Transitions</strong>${transitions}</div>` : ''}`;
+  }
 
   const spark = document.getElementById('results-spark');
   if (spark) {
@@ -436,6 +462,46 @@ export function renderCustomLists(lists, { onPlay, onDelete }) {
   }
 }
 
+const modalReturnFocus = new Map();
+
 export function setModal(id, open) {
-  document.getElementById(id)?.classList.toggle('hidden', !open);
+  const modal = document.getElementById(id);
+  if (!modal) return;
+  if (open) {
+    modalReturnFocus.set(id, document.activeElement);
+    modal.classList.remove('hidden');
+    for (const screen of document.querySelectorAll('#app > .screen')) screen.inert = true;
+    requestAnimationFrame(() => modal.querySelector('button, input, textarea, select')?.focus());
+  } else {
+    modal.classList.add('hidden');
+    for (const screen of document.querySelectorAll('#app > .screen')) screen.inert = false;
+    modalReturnFocus.get(id)?.focus?.();
+    modalReturnFocus.delete(id);
+  }
 }
+
+document.addEventListener('keydown', (e) => {
+  const modal = document.querySelector('.modal:not(.hidden)');
+  if (!modal) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    setModal(modal.id, false);
+    return;
+  }
+  if (e.key !== 'Tab') return;
+  const focusable = [...modal.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])')];
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (e.shiftKey && document.activeElement === first) {
+    e.preventDefault();
+    last.focus();
+  } else if (!e.shiftKey && document.activeElement === last) {
+    e.preventDefault();
+    first.focus();
+  }
+});
+
+document.addEventListener('click', (e) => {
+  if (e.target?.classList?.contains('modal')) setModal(e.target.id, false);
+});

@@ -196,6 +196,7 @@ h1.logo {
 .stage-list-ol { list-style: none; display: grid; gap: 0.7rem; }
 .stage-card {
   display: flex; align-items: center; gap: 1.1rem;
+  width: 100%; text-align: left;
   background: linear-gradient(180deg, var(--panel), rgba(12, 17, 32, 0.6));
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
@@ -203,6 +204,9 @@ h1.logo {
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
+.stage-list-ol > li { display: flex; align-items: stretch; gap: 0.6rem; }
+.stage-list-ol > li .stage-card { flex: 1; min-width: 0; }
+.stage-list-ol > li > .btn-practice { align-self: center; }
 .stage-card:hover:not(.locked),
 .stage-card:focus-visible:not(.locked) {
   transform: translateY(-2px);
@@ -274,7 +278,7 @@ h1.logo {
 .heatmap-keys { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 
 /* ---------- game ---------- */
-#game-header { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 2rem; }
+.game-header { display: flex; align-items: center; gap: 1.2rem; margin-bottom: 2rem; }
 #game-stage-name { flex: 1; font-size: 1.1rem; font-weight: 600; }
 #live-stats { display: flex; gap: 1.2rem; font-family: var(--mono); color: var(--text-dim); font-size: 0.9rem; }
 #live-stats #live-wpm { color: var(--accent); }
@@ -356,14 +360,6 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 229, 25
 .kb-key-blank { opacity: 0.3; }
 /* Target-only overlay when full-layer-map is off. */
 .kb-key.kb-layer-output .kb-legend { font-size: 1.05em; font-weight: 800; }
-/* Full plane mode: subtle ring so “you are on layer N” is obvious. */
-#keyboard.kb-showing-layer {
-  filter: drop-shadow(0 0 18px rgba(255, 178, 0, 0.12));
-}
-#keyboard.kb-showing-layer .kb-key.kb-layer-plane {
-  border-color: rgba(255, 178, 0, 0.35);
-}
-
 .kb-key.kb-target {
   --lift: -2px;
   background: var(--correct); color: #06281c; border-color: var(--correct);
@@ -451,6 +447,12 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 229, 25
   background: var(--panel); border: 1px solid var(--panel-edge);
   border-radius: var(--radius); padding: 0.75rem 1rem; margin-bottom: 0.8rem;
 }
+.focus-action {
+  display: flex; align-items: center; gap: 0.55rem; width: 100%; padding: 0;
+  border: 0; background: transparent; text-align: left; box-shadow: none;
+}
+.focus-action:hover { box-shadow: none; }
+.focus-action .focus-text { flex: 1; color: var(--text); }
 .focus-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent); margin-right: 0.5rem; }
 .streak-bar { color: var(--hold); font-weight: 600; }
 .track-section { margin-bottom: 1.4rem; }
@@ -537,6 +539,19 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 229, 25
 .results-coach { color: var(--text); margin: 0 auto 1.2rem; max-width: 32rem; line-height: 1.45; }
 .results-spark { margin-bottom: 1.2rem; color: var(--accent); }
 .spark-label { font-size: 0.75rem; color: var(--text-dim); margin-right: 0.5rem; }
+.results-analysis {
+  display: grid; gap: 0.75rem; max-width: 44rem; margin: 0 auto 1.5rem;
+  color: var(--text-dim); font-size: 0.85rem;
+}
+.results-analysis > div { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 0.45rem; }
+.results-analysis strong { color: var(--text); margin-right: 0.25rem; }
+.metric-pill {
+  display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.25rem 0.5rem;
+  border: 1px solid var(--panel-edge); border-radius: 999px; background: var(--panel);
+  font-family: var(--mono);
+}
+.metric-pill kbd { color: var(--accent); font: inherit; }
+.session-delta { color: var(--correct); }
 .note-label, .sandbox-label { display: block; text-align: left; max-width: 28rem; margin: 0 auto 0.3rem; font-size: 0.8rem; color: var(--text-dim); }
 #stage-note, #sandbox-paste, #list-items, #list-name, #wpm-goal {
   font: inherit; color: var(--text); background: var(--key);
@@ -613,18 +628,28 @@ button:hover { border-color: var(--accent); box-shadow: 0 0 16px rgba(0, 229, 25
   .logo-mark { width: 2.5rem; }
   .logo-word-main { font-size: 1.8rem; }
   .logo-word-sub { font-size: 0.8rem; letter-spacing: 0.84em; }
-  #keyboard, #sandbox-keyboard { flex-direction: column; align-items: center; gap: 2rem; }
+  #keyboard, #sandbox-keyboard { flex-direction: column; align-items: center; gap: 0.8rem; }
   .kb-half-L { transform: rotate(-1.5deg); }
   .kb-half-R { transform: rotate(1.5deg); }
-  #game-header { flex-wrap: wrap; row-gap: 0.6rem; }
+  #keyboard .kb-half, #sandbox-keyboard .kb-half { transition: transform 0.2s ease, opacity 0.2s ease, margin 0.2s ease; }
+  #keyboard .kb-half.kb-active-half, #sandbox-keyboard .kb-half.kb-active-half { opacity: 1; }
+  #keyboard .kb-half.kb-support-half:not(.kb-needed-half),
+  #sandbox-keyboard .kb-half.kb-support-half:not(.kb-needed-half) {
+    opacity: 0.5; transform: scale(0.62); margin-block: -3.6rem;
+  }
+  #keyboard .kb-half.kb-support-half.kb-needed-half,
+  #sandbox-keyboard .kb-half.kb-support-half.kb-needed-half {
+    opacity: 0.9; transform: scale(0.82); margin-block: -1.8rem;
+  }
+  .game-header { flex-wrap: wrap; row-gap: 0.6rem; }
   #prompt { font-size: 2rem; min-height: 2.8rem; margin-bottom: 1.2rem; }
   #layer-hint { margin-top: 1rem; }
   #results-stats { gap: 2rem; }
+  .stage-list-ol > li { flex-wrap: wrap; }
   .stage-card { flex-wrap: wrap; }
-  .btn-practice { width: 100%; }
+  .stage-list-ol > li > .btn-practice { width: 100%; }
   .stage-stats { width: 100%; margin-left: 2.8rem; }
   .heatmap-board { transform: scale(0.42); width: 230%; }
   .cheat-halves { grid-template-columns: 1fr; }
   .kb-focus-mode { transform: scale(0.9); }
 }
-

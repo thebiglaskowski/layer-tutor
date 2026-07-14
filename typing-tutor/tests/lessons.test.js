@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  STAGES, buildRound, practiceRoundSize, PRACTICE_ROUND_MULT,
+  STAGES, TRACK_META, buildRound, practiceRoundSize, PRACTICE_ROUND_MULT,
   buildWeakKeyRound, contextualTip, coachFromMistakes, todaysFocus,
+  summarizeRunMetrics,
 } from '../js/lessons.js';
 import { charToKey } from '../js/keyboardLayout.js';
 
@@ -13,6 +14,11 @@ test('curriculum includes bigrams, hold-drill, pulse-drill in order', () => {
   assert.ok(ids.includes('hold-drill'));
   assert.ok(ids.includes('pulse-drill'));
   assert.equal(STAGES.length, 15);
+});
+
+test('track grouping preserves progressive stage order', () => {
+  const orders = STAGES.map((stage) => TRACK_META[stage.track].order);
+  assert.deepEqual(orders, [...orders].sort((a, b) => a - b));
 });
 
 test('every stage item uses only mappable characters', () => {
@@ -62,6 +68,43 @@ test('buildWeakKeyRound prefers heatmap chars and stays mappable', () => {
   for (const item of items) {
     for (const ch of item) assert.ok(charToKey(ch), ch);
   }
+});
+
+test('weak-key rounds ignore unmappable imported metrics and always terminate', () => {
+  const items = buildWeakKeyRound(
+    { '💩': 99 },
+    charToKey,
+    12,
+    () => 0,
+    { '💩': { attempts: 10, errors: 10, samples: 0, totalLatencyMs: 0 } },
+  );
+  assert.equal(items.length, 12);
+  assert.ok(items.every((item) => [...item].every((ch) => charToKey(ch))));
+});
+
+test('run analysis reports slow keys and layer transitions', () => {
+  const analysis = summarizeRunMetrics({
+    keyMetrics: {
+      a: { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 200 },
+      '1': { attempts: 1, errors: 0, samples: 1, totalLatencyMs: 600 },
+    },
+    events: [
+      { ch: 'a', previousCh: null, latencyMs: 200 },
+      { ch: '1', previousCh: 'a', latencyMs: 600, errors: 1 },
+      { ch: 'a', previousCh: '1', latencyMs: 300 },
+    ],
+  }, charToKey);
+  assert.equal(analysis.slowest[0].ch, '1');
+  assert.equal(analysis.transitionMetrics['enter-layer-1'].count, 1);
+  assert.equal(analysis.transitions.find((row) => row.kind === 'enter-layer-1').accuracy, 50);
+  assert.equal(analysis.transitionMetrics['exit-layer-1'].count, 1);
+});
+
+test('editorial filter removes blocked and broken generated content', () => {
+  const allItems = STAGES.flatMap((stage) => stage.pool);
+  assert.equal(allItems.some((item) => /\b(?:fag|fags|nazi|lsd)\b/i.test(item)), false);
+  assert.equal(STAGES.find((stage) => stage.id === 'all-letters').pool
+    .some((item) => /\b(?:can|will)\s+\w+s\b|^Please\s+\w+s\b|^Did\s+.+\s+\w+s\b/i.test(item)), false);
 });
 
 test('contextualTip mentions hold for layer chars', () => {

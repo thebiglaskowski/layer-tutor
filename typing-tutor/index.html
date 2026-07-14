@@ -126,7 +126,6 @@
           <label class="toggle"><input type="checkbox" id="set-home-ghost" checked> Home-row finger ghost</label>
           <label class="toggle"><input type="checkbox" id="set-board-collapsed"> Collapse board by default</label>
           <label class="toggle"><input type="checkbox" id="set-reduced-auto" checked> Auto-expand board on layer targets</label>
-          <label class="toggle"><input type="checkbox" id="set-full-layer-map" checked> Full layer map when target needs Fn (recommended)</label>
         </div>
         <div class="settings-actions">
           <button type="button" id="btn-sound" aria-pressed="true">Sound: on</button>
@@ -149,7 +148,7 @@
 
     <!-- ========== GAME ========== -->
     <section id="screen-game" class="screen hidden" aria-label="Typing stage" aria-hidden="true">
-      <header id="game-header">
+      <header class="game-header">
         <button type="button" id="btn-quit">&larr; Menu</button>
         <h2 id="game-stage-name"></h2>
         <span id="game-board-label" class="game-board-label"></span>
@@ -184,7 +183,7 @@
 
     <!-- ========== SANDBOX ========== -->
     <section id="screen-sandbox" class="screen hidden" aria-label="Sandbox" aria-hidden="true">
-      <header id="game-header">
+      <header class="game-header">
         <button type="button" id="btn-sandbox-back">&larr; Menu</button>
         <h2>Sandbox</h2>
         <span class="game-board-label" id="sandbox-board-label"></span>
@@ -208,6 +207,7 @@
       <div id="results-delta" class="results-delta"></div>
       <div id="results-note"></div>
       <p id="results-coach" class="results-coach"></p>
+      <div id="results-analysis" class="results-analysis"></div>
       <div id="results-spark" class="results-spark"></div>
       <div id="results-mistakes"></div>
       <label class="note-label" for="stage-note">Notes for this stage</label>

@@ -3,6 +3,7 @@
 import {
   STAGES, buildRound, practiceRoundSize, PASS_ACCURACY,
   buildWeakKeyRound, buildCustomRound, contextualTip, coachFromMistakes,
+  summarizeRunMetrics,
 } from './lessons.js';
 import {
   getBoard, listPlayableBoards, DEFAULT_BOARD_ID, boardFullLabel,
@@ -40,7 +41,7 @@ let onboardIdx = 0;
 
 const ARROWS = { ArrowLeft: '←', ArrowDown: '↓', ArrowUp: '↑', ArrowRight: '→' };
 
-sound.initSoundFromStorage();
+sound.initSound(progress.settings?.soundEnabled !== false);
 
 function now() {
   return Date.now() - pausedAccumMs;
@@ -52,7 +53,7 @@ function settings() {
     showHomeGhost: true,
     boardCollapsed: false,
     reducedBoardAuto: true,
-    fullLayerMap: true,
+    soundEnabled: true,
   };
 }
 
@@ -67,6 +68,7 @@ function goMenu() {
   sandboxKb?.destroy();
   sandboxKb = null;
   progress = storage.load(activeBoard.id);
+  sound.setSoundEnabled(progress.settings?.soundEnabled !== false);
 
   if (!progress.onboardingDone) {
     startOnboarding();
@@ -77,6 +79,14 @@ function goMenu() {
     boards: listPlayableBoards(),
     activeBoard,
     onBoardChange: switchBoard,
+    onFocus: (focus) => {
+      if (focus.kind === 'weak') {
+        startStage({ id: '_weak', name: 'Weak keys', layerHint: '', coachTip: '', pool: [], roundSize: 24, track: 'mixed' }, { weakKeys: true });
+        return;
+      }
+      const suggested = STAGES.find((s) => s.id === focus.stageId);
+      if (suggested) startStage(suggested, { practice: false });
+    },
   });
 
   // Heatmap mini board
@@ -107,7 +117,6 @@ function wireSettings() {
     ['set-home-ghost', 'showHomeGhost'],
     ['set-board-collapsed', 'boardCollapsed'],
     ['set-reduced-auto', 'reducedBoardAuto'],
-    ['set-full-layer-map', 'fullLayerMap'],
   ];
   for (const [id, key] of map) {
     const el = document.getElementById(id);
@@ -154,7 +163,13 @@ function startStage(s, opts = {}) {
 
   let items;
   if (opts.weakKeys) {
-    items = buildWeakKeyRound(progress.heatmap, (ch) => activeBoard.charToKey(ch), 24);
+    items = buildWeakKeyRound(
+      progress.heatmap,
+      (ch) => activeBoard.charToKey(ch),
+      24,
+      Math.random,
+      progress.keyMetrics,
+    );
     stage = {
       id: '_weak',
       name: 'Weak keys',
@@ -180,7 +195,13 @@ function startStage(s, opts = {}) {
       _wpmGoal: 0,
     };
   } else if (opts.drillMisses) {
-    items = buildWeakKeyRound(opts.drillMisses, (ch) => activeBoard.charToKey(ch), 20);
+    items = buildWeakKeyRound(
+      opts.drillMisses,
+      (ch) => activeBoard.charToKey(ch),
+      20,
+      Math.random,
+      progress.keyMetrics,
+    );
     stage = {
       ...s,
       id: s.id,
@@ -198,10 +219,10 @@ function startStage(s, opts = {}) {
     items = buildRound(s, Math.random, count);
   }
 
-  game = createGame(items);
+  game = createGame(items, now());
 
   document.getElementById('game-stage-name').textContent =
-    practice && runMode !== 'stage' ? stage.name : (opts.practice ? `${stage.name} · practice` : stage.name);
+    runMode === 'practice' ? `${stage.name} · practice` : stage.name;
   document.getElementById('layer-hint').textContent = stage.layerHint;
   document.getElementById('coach-tip').textContent = stage.coachTip;
   document.getElementById('game-board-label').textContent = activeBoard.name;
@@ -221,7 +242,7 @@ function refresh() {
   ui.renderPrompt(item, game.cursor);
   const ch = currentChar(game);
   const target = activeBoard.charToKey(ch);
-  kb?.highlightTarget(target, { fullLayerMap: settings().fullLayerMap !== false });
+  kb?.highlightTarget(target);
   applyBoardChrome(target);
   ui.setContextTip(contextualTip(ch, (c) => activeBoard.charToKey(c), stage?.coachTip));
   const { frac } = progressCounts(game);
@@ -273,6 +294,11 @@ function finishStage() {
   setPaused(false);
   sound.playDone();
   const s = stats(game, now());
+  const runAnalysis = summarizeRunMetrics(game, (c) => activeBoard.charToKey(c));
+  const sessionStart = (progress.sessionRuns || []).find((run) => {
+    const age = Date.now() - Date.parse(run.at);
+    return age >= 0 && age <= 2 * 60 * 60 * 1000;
+  }) || null;
   const prevBest = stage?.id && progress.stages[stage.id]
     ? { wpm: progress.stages[stage.id].bestWpm, accuracy: progress.stages[stage.id].bestAccuracy }
     : null;
@@ -289,6 +315,7 @@ function finishStage() {
       weakKeys: runMode === 'weak',
       customList: runMode === 'custom',
       boardId: activeBoard.id,
+      metrics: runAnalysis,
     },
   );
   progress = data;
@@ -317,6 +344,14 @@ function finishStage() {
     previousBest: prevBest,
     coach: coachFromMistakes(game.mistakes, (c) => activeBoard.charToKey(c)),
     recentRuns: recent,
+    runAnalysis,
+    sessionDelta: sessionStart ? {
+      wpm: s.wpm - sessionStart.wpm,
+      accuracy: Math.round((s.accuracy - sessionStart.accuracy) * 10) / 10,
+      latencyMs: sessionStart.avgLatencyMs && runAnalysis.avgLatencyMs
+        ? runAnalysis.avgLatencyMs - sessionStart.avgLatencyMs
+        : null,
+    } : null,
   });
   ui.showScreen('screen-results');
   ui.announce(`${s.wpm} wpm, ${s.accuracy} percent`);
@@ -359,7 +394,7 @@ function sandboxType(ch) {
     }
     const nextCh = sandboxLoad ? sandboxLoad[sandboxCursor] : ch;
     const t = activeBoard.charToKey(nextCh);
-    sandboxKb?.highlightTarget(t, { fullLayerMap: settings().fullLayerMap !== false });
+    sandboxKb?.highlightTarget(t);
     const tip = document.getElementById('sandbox-tip');
     if (tip) {
       tip.textContent = contextualTip(
@@ -374,7 +409,7 @@ function sandboxType(ch) {
   if (prompt.textContent.length > 80) prompt.textContent = prompt.textContent.slice(-60);
   const t = activeBoard.charToKey(ch);
   if (t) signalFromKey(sandboxKb?.getKeyRect(t.keyId), t.layer);
-  sandboxKb?.highlightTarget(t, { fullLayerMap: settings().fullLayerMap !== false });
+  sandboxKb?.highlightTarget(t);
   const tip = document.getElementById('sandbox-tip');
   if (tip) tip.textContent = contextualTip(ch, (c) => activeBoard.charToKey(c), '');
   sound.playCorrect();
@@ -444,6 +479,10 @@ function keyToChar(e) {
   return null;
 }
 
+function isEditableControl(el) {
+  return !!el?.closest?.('button, input, textarea, select, summary, a[href]');
+}
+
 function isGameScreen() {
   return !document.getElementById('screen-game')?.classList.contains('hidden');
 }
@@ -481,16 +520,19 @@ document.addEventListener('keydown', (e) => {
   if (ch === null) return;
 
   if (isOnboardScreen()) {
+    if (isEditableControl(e.target)) return;
     e.preventDefault();
     onboardKey(ch);
     return;
   }
   if (isSandboxScreen()) {
+    if (isEditableControl(e.target)) return;
     e.preventDefault();
     sandboxType(ch);
     return;
   }
   if (!game || game.done || !isGameScreen()) return;
+  if (isEditableControl(e.target)) return;
 
   e.preventDefault();
   e.stopPropagation();
@@ -561,13 +603,20 @@ document.getElementById('btn-sandbox-clear')?.addEventListener('click', () => {
   sandboxKb?.highlightTarget(null);
 });
 document.getElementById('btn-sandbox-load')?.addEventListener('click', () => {
-  const text = document.getElementById('sandbox-paste').value;
-  if (!text.trim()) return;
+  const raw = document.getElementById('sandbox-paste').value;
+  if (!raw.trim()) return;
+  const text = [...raw].filter((ch) => activeBoard.charToKey(ch)).join('');
+  if (!text) {
+    ui.announce('That paste has no characters mapped on this board.');
+    return;
+  }
+  const skipped = [...raw].length - [...text].length;
+  if (skipped) ui.announce(`Loaded paste; skipped ${skipped} unsupported character${skipped === 1 ? '' : 's'}.`);
   sandboxLoad = text;
   sandboxCursor = 0;
   renderSandboxPrompt();
   const t = activeBoard.charToKey(sandboxLoad[0]);
-  sandboxKb?.highlightTarget(t, { fullLayerMap: settings().fullLayerMap !== false });
+  sandboxKb?.highlightTarget(t);
   document.getElementById('sandbox-prompt')?.focus();
 });
 
@@ -684,7 +733,8 @@ function syncSoundToggle() {
   btn.setAttribute('aria-pressed', on ? 'true' : 'false');
 }
 document.getElementById('btn-sound')?.addEventListener('click', () => {
-  sound.setSoundEnabled(!sound.isSoundEnabled());
+  const enabled = sound.setSoundEnabled(!sound.isSoundEnabled());
+  progress = storage.updateSettings({ soundEnabled: enabled }, activeBoard.id);
   syncSoundToggle();
 });
 

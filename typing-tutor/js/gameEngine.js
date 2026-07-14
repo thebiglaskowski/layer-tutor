@@ -4,7 +4,7 @@
 // zero out the clock before the learner has begun the line. Errors before
 // that still count toward accuracy and the mistake map.
 
-export function createGame(items) {
+export function createGame(items, now = null) {
   return {
     items,
     itemIndex: 0,
@@ -14,6 +14,11 @@ export function createGame(items) {
     startTime: null,
     endTime: null,
     mistakes: {},
+    keyMetrics: {},
+    events: [],
+    targetStartedAt: Number.isFinite(now) ? now : null,
+    previousCorrectChar: null,
+    currentTargetErrors: 0,
     done: false,
   };
 }
@@ -30,9 +35,28 @@ export function currentChar(game) {
 export function handleKey(game, ch, now) {
   if (game.done) return 'ignored';
   const target = currentChar(game);
+  const metric = game.keyMetrics[target] ?? {
+    attempts: 0, correct: 0, errors: 0, totalLatencyMs: 0, samples: 0,
+  };
+  metric.attempts += 1;
+  game.keyMetrics[target] = metric;
   if (ch === target) {
     if (game.startTime === null) game.startTime = now;
     game.correct += 1;
+    metric.correct += 1;
+    const latencyMs = game.targetStartedAt == null
+      ? 0
+      : Math.max(0, now - game.targetStartedAt);
+    metric.totalLatencyMs += latencyMs;
+    metric.samples += 1;
+    game.events.push({
+      ch: target,
+      previousCh: game.previousCorrectChar,
+      latencyMs,
+      errors: game.currentTargetErrors,
+    });
+    game.previousCorrectChar = target;
+    game.currentTargetErrors = 0;
     game.cursor += 1;
     if (game.cursor >= game.items[game.itemIndex].length) {
       game.itemIndex += 1;
@@ -43,10 +67,13 @@ export function handleKey(game, ch, now) {
         return 'done';
       }
     }
+    game.targetStartedAt = now;
     return 'correct';
   }
   // Wrong key: count error even before the WPM clock starts.
   game.errors += 1;
+  metric.errors += 1;
+  game.currentTargetErrors += 1;
   game.mistakes[target] = (game.mistakes[target] ?? 0) + 1;
   game.lastWrong = ch;
   return 'error';

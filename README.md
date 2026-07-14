@@ -92,7 +92,7 @@ Multi-board ready: pick a keyboard in the menu; progress is stored **per board**
 <td width="50%" valign="top">
 
 ### Practice modes
-- **Weak-key drill** from your miss heatmap
+- **Adaptive weak-key drill** from error rate + response time
 - **Sandbox** — free type + paste any string
 - **Custom word lists** (emails, shell, work jargon)
 - Longer **Practice** rounds without unlock side-effects
@@ -104,7 +104,7 @@ Multi-board ready: pick a keyboard in the menu; progress is stored **per board**
 ### Progress & polish
 - Per-board heatmap + mini keyboard heat view
 - Daily streak · “Today” focus card · WPM goals · notes
-- Recent-run sparklines · vs-best deltas · coaching line
+- Recent-run sparklines · vs-best/session deltas · slow-key and transition coaching
 - Export / import full progress JSON
 - First-run onboarding · layer map cheat sheet
 - Offline **PWA** · sound toggle · pause on Esc / blur
@@ -259,13 +259,21 @@ Stored under `localStorage` key `qmk-typing-tutor-v1` (name kept for continuity)
         }
       },
       "heatmap": { "a": 4, "[": 2 },
+      "keyMetrics": {
+        "a": { "attempts": 40, "correct": 36, "errors": 4, "totalLatencyMs": 9200, "samples": 36 }
+      },
+      "transitionMetrics": {
+        "enter-layer-1": { "count": 12, "errors": 1, "totalLatencyMs": 5100 }
+      },
+      "sessionRuns": [{ "wpm": 40, "accuracy": 95, "avgLatencyMs": 310, "at": "…" }],
       "streak": { "lastDate": "2026-07-10", "count": 3 },
       "customLists": [],
       "settings": {
         "focusMode": true,
         "showHomeGhost": true,
         "boardCollapsed": false,
-        "reducedBoardAuto": true
+        "reducedBoardAuto": true,
+        "soundEnabled": true
       }
     }
   }

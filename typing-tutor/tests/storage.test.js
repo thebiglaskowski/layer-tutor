@@ -26,6 +26,9 @@ test('first stage starts unlocked with v4 fields', () => {
   assert.deepEqual(data.stages.s1.recentRuns, []);
   assert.equal(data.stages.s1.note, '');
   assert.equal(data.streak.count, 0);
+  assert.deepEqual(data.keyMetrics, {});
+  assert.deepEqual(data.transitionMetrics, {});
+  assert.deepEqual(data.sessionRuns, []);
   assert.ok(data.settings);
   assert.equal(data.onboardingDone, false);
 });
@@ -61,11 +64,40 @@ test('fluent badge, notes, goals, settings', () => {
   assert.equal(data.stages.s1.wpmGoal, 45);
   data = s.updateSettings({ focusMode: false });
   assert.equal(data.settings.focusMode, false);
-  assert.equal(data.settings.fullLayerMap, true); // default preserved
-  data = s.updateSettings({ fullLayerMap: false });
-  assert.equal(data.settings.fullLayerMap, false);
+  assert.equal(data.settings.soundEnabled, true);
+  data = s.updateSettings({ soundEnabled: false });
+  assert.equal(data.settings.soundEnabled, false);
   data = s.setOnboardingDone(true);
   assert.equal(data.onboardingDone, true);
+});
+
+test('does not combine speed and accuracy records from separate runs for fluent', () => {
+  const s = store();
+  assert.equal(s.saveResult('s1', 40, 80).data.stages.s1.fluent, false);
+  const result = s.saveResult('s1', 20, 95);
+  assert.equal(result.fluentNow, false);
+  assert.equal(result.data.stages.s1.fluent, false);
+});
+
+test('aggregates adaptive key, transition, and session metrics', () => {
+  const s = store();
+  const metrics = {
+    keyMetrics: {
+      a: { attempts: 3, correct: 2, errors: 1, totalLatencyMs: 800, samples: 2 },
+    },
+    transitionMetrics: {
+      'enter-layer-1': { count: 2, totalLatencyMs: 900 },
+    },
+    avgLatencyMs: 400,
+  };
+  s.saveResult('s1', 30, 90, { a: 1 }, { metrics });
+  s.saveResult(null, 20, 80, {}, { metrics, weakKeys: true });
+  const data = s.load();
+  assert.equal(data.keyMetrics.a.attempts, 6);
+  assert.equal(data.keyMetrics.a.errors, 2);
+  assert.equal(data.transitionMetrics['enter-layer-1'].count, 4);
+  assert.equal(data.sessionRuns.length, 2);
+  assert.equal(data.sessionRuns[0].avgLatencyMs, 400);
 });
 
 test('custom lists and export/import', () => {
@@ -86,6 +118,11 @@ test('custom lists and export/import', () => {
 test('corrupted JSON starts fresh', () => {
   const data = store(fakeBacking({ [STORE_KEY]: '{nope' })).load();
   assert.equal(data.stages.s1.unlocked, true);
+});
+
+test('migrates the legacy sound preference into board settings', () => {
+  const data = store(fakeBacking({ 'qmk-typing-tutor-sound': '0' })).load();
+  assert.equal(data.settings.soundEnabled, false);
 });
 
 test('load does not rewrite when current', () => {

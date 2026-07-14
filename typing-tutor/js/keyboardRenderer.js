@@ -137,6 +137,7 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
   const shiftKeysFor = board.shiftKeysFor.bind(board);
 
   const keyEls = new Map();
+  const halfEls = new Map();
   container.innerHTML = '';
   container.setAttribute('role', 'img');
   container.setAttribute(
@@ -147,6 +148,7 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
   for (const half of ['L', 'R']) {
     const halfEl = document.createElement('div');
     halfEl.className = `kb-half kb-half-${half}`;
+    halfEl.dataset.half = half;
     halfEl.style.width = `${(WIDTH_U * U).toFixed(2)}rem`;
     halfEl.style.height = `${(HEIGHT_U * U).toFixed(2)}rem`;
     halfEl.appendChild(caseSvg(half));
@@ -176,31 +178,25 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
       keyEls.set(key.id, el);
     }
     container.appendChild(halfEl);
+    halfEls.set(half, halfEl);
   }
 
-  /**
-   * Paint legends for a display layer (0 = base keycaps).
-   * Layer 1/2 = full momentary map while the prompt needs that plane.
-   */
-  function paintLegends(layer = 0) {
-    container.classList.toggle('kb-showing-layer', layer > 0);
-    container.dataset.displayLayer = String(layer);
+  /** Paint the permanent base-keycap legends. */
+  function paintLegends() {
+    container.dataset.displayLayer = '0';
     for (const key of KEYS) {
       const el = keyEls.get(key.id);
-      // Prefer layer legend; fall back to base so mods still read.
-      let text = key.legends[layer];
-      if (text == null && layer > 0) text = key.legends[0];
+      const text = key.legends[0];
       const legendEl = el.querySelector('.kb-legend');
       legendEl.textContent = text ?? '';
       el.classList.toggle('kb-key-blank', text == null);
       el.classList.toggle('kb-key-wide-legend', (text ?? '').length > 1);
-      el.classList.toggle('kb-layer-plane', layer > 0 && key.legends[layer] != null);
-      el.classList.remove('kb-layer-output');
+      el.classList.remove('kb-layer-plane', 'kb-layer-output');
     }
   }
 
   function paintBaseLegends() {
-    paintLegends(0);
+    paintLegends();
   }
 
   function clearHighlights() {
@@ -214,27 +210,29 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
 
   /**
    * @param {object|null} target  { keyId, layer, shift }
-   * @param {{ fullLayerMap?: boolean }} [opts]
-   *   fullLayerMap (default true): when target.layer > 0, show that layer on
-   *   every key so the whole plane is visible while "holding" for the prompt.
    */
-  function highlightTarget(target, opts = {}) {
-    const fullLayerMap = opts.fullLayerMap !== false;
+  function highlightTarget(target) {
     clearHighlights();
+    for (const halfEl of halfEls.values()) {
+      halfEl.classList.remove('kb-active-half', 'kb-support-half', 'kb-needed-half');
+    }
 
     if (!target) {
-      paintLegends(0);
+      paintLegends();
       return;
     }
 
-    const showPlane = fullLayerMap && target.layer > 0;
-    paintLegends(showPlane ? target.layer : 0);
+    // Base legends never move. Layer output overlays the green target only.
+    paintLegends();
+    const targetHalf = target.keyId?.[0];
+    for (const [half, halfEl] of halfEls) {
+      halfEl.classList.add(half === targetHalf ? 'kb-active-half' : 'kb-support-half');
+    }
 
     const targetEl = keyEls.get(target.keyId);
     if (targetEl) {
       targetEl.classList.add('kb-target');
-      // Target-only overlay when full plane is off, or shift-upper on base.
-      if (!showPlane && target.layer > 0) {
+      if (target.layer > 0) {
         const key = KEYS.find((k) => k.id === target.keyId);
         const out = key?.legends[target.layer];
         if (out) {
@@ -256,6 +254,7 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
       const holdEl = keyEls.get(LAYER_HOLD[target.layer]);
       if (holdEl) {
         holdEl.classList.add('kb-hold');
+        holdEl.closest('.kb-half')?.classList.add('kb-needed-half');
         const badge = holdEl.querySelector('.kb-badge');
         badge.hidden = false;
         badge.textContent = target.layer === 1 ? 'HOLD L-FN' : 'HOLD R-FN';
@@ -266,6 +265,7 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
         const shiftEl = keyEls.get(id);
         if (shiftEl) {
           shiftEl.classList.add('kb-shift');
+          shiftEl.closest('.kb-half')?.classList.add('kb-needed-half');
           const badge = shiftEl.querySelector('.kb-badge');
           badge.hidden = false;
           badge.textContent = 'SHIFT';
@@ -359,6 +359,7 @@ export function renderKeyboard(container, board = PRIMARY_BOARD) {
     destroy() {
       clearHighlights();
       keyEls.clear();
+      halfEls.clear();
       container.innerHTML = '';
     },
   };

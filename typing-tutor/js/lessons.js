@@ -11,7 +11,7 @@ export const PRACTICE_ROUND_MULT = 3;
 /** Track labels for menu grouping */
 export const TRACK_META = {
   base: { title: 'Base layer', order: 0 },
-  split: { title: 'Split hands', order: 1 },
+  split: { title: 'Split hands & full base', order: 1 },
   layer1: { title: 'Layer 1 · left Fn', order: 2 },
   layer2: { title: 'Layer 2 · right Fn', order: 3 },
   mixed: { title: 'Mixed mastery', order: 4 },
@@ -92,7 +92,7 @@ export const STAGES = [
     coachTip: 'Both hands, all rows. Keep eyes on the prompt; trust the glowing target key.',
     roundSize: 6,
     pool: POOLS['all-letters'],
-    track: 'base',
+    track: 'split',
   },
   {
     id: 'numbers',
@@ -188,9 +188,30 @@ export function practiceRoundSize(stage) {
 }
 
 /** Build items overweighting heatmap misses (and neighbors). */
-export function buildWeakKeyRound(heatmap, charToKey, count = 24, rand = Math.random) {
-  const ranked = Object.entries(heatmap || {})
-    .filter(([, n]) => n > 0)
+export function buildWeakKeyRound(
+  heatmap,
+  charToKey,
+  count = 24,
+  rand = Math.random,
+  keyMetrics = {},
+) {
+  const chars = new Set([...Object.keys(heatmap || {}), ...Object.keys(keyMetrics || {})]);
+  const ranked = [...chars]
+    .filter((ch) => charToKey(ch))
+    .map((ch) => {
+      const m = keyMetrics[ch] || {};
+      const attempts = Math.max(0, Number(m.attempts) || 0);
+      const errors = Math.max(0, Number(m.errors) || Number(heatmap?.[ch]) || 0);
+      const samples = Math.max(0, Number(m.samples) || 0);
+      const errorRate = attempts ? errors / attempts : Math.min(1, errors / 3);
+      const avgLatency = samples ? (Number(m.totalLatencyMs) || 0) / samples : 0;
+      // Error rate dominates; hesitation breaks ties. A tiny confidence factor
+      // keeps one accidental miss from outranking a consistently weak key.
+      const confidence = Math.min(1, Math.max(0.25, attempts / 8));
+      const score = errorRate * 5 * confidence + Math.min(2, avgLatency / 1000);
+      return [ch, score];
+    })
+    .filter(([, score]) => score > 0)
     .sort((a, b) => b[1] - a[1]);
   if (!ranked.length) {
     return buildRound(
@@ -201,7 +222,10 @@ export function buildWeakKeyRound(heatmap, charToKey, count = 24, rand = Math.ra
   }
   const top = ranked.slice(0, 12).map(([ch]) => ch);
   const items = [];
-  while (items.length < count) {
+  let attempts = 0;
+  const maxAttempts = Math.max(100, count * 50);
+  while (items.length < count && attempts < maxAttempts) {
+    attempts += 1;
     // 70% pure miss chars / short combos, 30% mixed with easy fillers
     if (rand() < 0.7) {
       const a = top[Math.floor(rand() * top.length)];
@@ -221,7 +245,78 @@ export function buildWeakKeyRound(heatmap, charToKey, count = 24, rand = Math.ra
       if ([...s].every((ch) => charToKey(ch))) items.push(s);
     }
   }
+  const fallback = [...'asdfghjklqwertyuiop'].filter((ch) => charToKey(ch));
+  while (items.length < count && fallback.length) {
+    items.push(fallback[items.length % fallback.length]);
+  }
   return items;
+}
+
+function transitionKind(previous, current) {
+  if (!previous || !current) return 'start';
+  if (previous.layer === 0 && current.layer > 0) return `enter-layer-${current.layer}`;
+  if (previous.layer > 0 && current.layer === 0) return `exit-layer-${previous.layer}`;
+  if (previous.layer !== current.layer) return 'switch-layer';
+  if (previous.keyId?.[0] !== current.keyId?.[0]) return 'switch-hand';
+  return current.layer > 0 ? `stay-layer-${current.layer}` : 'same-hand-base';
+}
+
+/** Aggregate a completed run into durable metrics and concise coaching. */
+export function summarizeRunMetrics(game, charToKey) {
+  const transitionMetrics = {};
+  for (const event of game?.events || []) {
+    const kind = transitionKind(charToKey(event.previousCh), charToKey(event.ch));
+    const metric = transitionMetrics[kind] || { count: 0, errors: 0, totalLatencyMs: 0 };
+    metric.count += 1;
+    metric.errors += Math.max(0, Number(event.errors) || 0);
+    metric.totalLatencyMs += Math.max(0, Number(event.latencyMs) || 0);
+    transitionMetrics[kind] = metric;
+  }
+
+  const keyRows = Object.entries(game?.keyMetrics || {}).map(([ch, m]) => ({
+    ch,
+    errorRate: m.attempts ? m.errors / m.attempts : 0,
+    avgLatencyMs: m.samples ? m.totalLatencyMs / m.samples : 0,
+    attempts: m.attempts,
+  }));
+  const sampled = keyRows.filter((r) => r.avgLatencyMs > 0);
+  const avgLatencyMs = sampled.length
+    ? Math.round(sampled.reduce((sum, r) => sum + r.avgLatencyMs, 0) / sampled.length)
+    : 0;
+  const slowest = [...sampled]
+    .sort((a, b) => b.avgLatencyMs - a.avgLatencyMs || b.errorRate - a.errorRate)
+    .slice(0, 5);
+  const transitionRows = Object.entries(transitionMetrics)
+    .filter(([kind]) => kind !== 'start')
+    .map(([kind, m]) => ({
+      kind,
+      count: m.count,
+      accuracy: Math.round((m.count / Math.max(1, m.count + m.errors)) * 1000) / 10,
+      avgLatencyMs: m.count ? Math.round(m.totalLatencyMs / m.count) : 0,
+    }))
+    .sort((a, b) => (
+      ((100 - b.accuracy) * 20 + b.avgLatencyMs)
+      - ((100 - a.accuracy) * 20 + a.avgLatencyMs)
+    ));
+
+  let transitionCoach = '';
+  const slowTransition = transitionRows[0];
+  if (slowTransition?.kind.startsWith('exit-layer')) {
+    transitionCoach = 'Layer release is the toughest transition—release the thumb as the layer key lands.';
+  } else if (slowTransition?.kind.startsWith('enter-layer')) {
+    transitionCoach = 'Layer entry is the toughest transition—lead with the thumb, then strike the target.';
+  } else if (slowTransition?.kind === 'switch-hand') {
+    transitionCoach = 'Hand switches are costing the most time—keep both hands parked over home.';
+  }
+
+  return {
+    keyMetrics: game?.keyMetrics || {},
+    transitionMetrics,
+    avgLatencyMs,
+    slowest,
+    transitions: transitionRows,
+    transitionCoach,
+  };
 }
 
 export function buildCustomRound(items, count = 20, rand = Math.random) {
@@ -268,7 +363,11 @@ export function coachFromMistakes(mistakes, charToKey) {
 export function todaysFocus(progress, stages = STAGES) {
   const unlocked = stages.filter((s) => progress.stages[s.id]?.unlocked);
   const nextLocked = stages.find((s) => !progress.stages[s.id]?.unlocked);
-  const weak = Object.entries(progress.heatmap || {}).sort((a, b) => b[1] - a[1])[0];
+  const weak = Object.entries(progress.keyMetrics || {})
+    .filter(([, m]) => m?.attempts > 0)
+    .map(([ch, m]) => [ch, (m.errors / m.attempts) + ((m.samples ? m.totalLatencyMs / m.samples : 0) / 5000)])
+    .sort((a, b) => b[1] - a[1])[0]
+    || Object.entries(progress.heatmap || {}).sort((a, b) => b[1] - a[1])[0];
   if (nextLocked) {
     const prev = stages[stages.indexOf(nextLocked) - 1];
     return {
@@ -288,7 +387,7 @@ export function todaysFocus(progress, stages = STAGES) {
   if (weak) {
     return {
       kind: 'weak',
-      title: `Weakest key: “${weak[0]}” (×${weak[1]}) — run weak-key drill`,
+      title: `Weakest key: “${weak[0]}” — train its accuracy and response time`,
       stageId: null,
     };
   }

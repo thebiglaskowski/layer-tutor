@@ -5,23 +5,15 @@ let enabled = true;
 
 export function setSoundEnabled(on) {
   enabled = !!on;
-  try {
-    localStorage.setItem('qmk-typing-tutor-sound', enabled ? '1' : '0');
-  } catch { /* ignore */ }
+  return enabled;
 }
 
 export function isSoundEnabled() {
-  try {
-    const v = localStorage.getItem('qmk-typing-tutor-sound');
-    if (v === null) return true;
-    return v !== '0';
-  } catch {
-    return true;
-  }
+  return enabled;
 }
 
-export function initSoundFromStorage() {
-  enabled = isSoundEnabled();
+export function initSound(on = true) {
+  enabled = on !== false;
   return enabled;
 }
 
