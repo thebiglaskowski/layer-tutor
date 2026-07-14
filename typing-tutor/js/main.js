@@ -454,10 +454,23 @@ function isOnboardScreen() {
   return !document.getElementById('screen-onboarding')?.classList.contains('hidden');
 }
 
+// Esc is a base-layer key on the Corne (L00, next to Q) — stray hits are common,
+// so pausing requires a deliberate double-tap; a single Esc always resumes.
+const ESC_DOUBLE_TAP_MS = 400;
+let lastEscAt = 0;
+
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && isGameScreen() && game && !game.done) {
     e.preventDefault();
-    setPaused(!paused);
+    if (paused) {
+      setPaused(false);
+      lastEscAt = 0;
+    } else if (Date.now() - lastEscAt <= ESC_DOUBLE_TAP_MS) {
+      setPaused(true);
+      lastEscAt = 0;
+    } else {
+      lastEscAt = Date.now();
+    }
     return;
   }
   if (paused) return;
